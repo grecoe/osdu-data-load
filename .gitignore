@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Other files
+OSDU_Data_Upload.docx
+
 # C extensions
 *.so
 

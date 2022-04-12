@@ -1,0 +1,5 @@
+# Get same packages here as environment.yml and the right python package with docker FROM
+requests==2.27.1
+azure.identity==1.7.0
+azure.storage.blob==12.11.0
+joblib==1.1.0
