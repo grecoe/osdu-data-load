@@ -10,7 +10,7 @@ from utils.fileshare.mount import FileClass, Mount
 # Load Configuration (environment and ini file)
 ################################################
 config = Config("./settings.ini")
-config.logger = LoggingUtils.get_logger(config.file_share_mount, config.log_name)
+config.logger = LoggingUtils.get_logger(config.file_share_mount, config.log_name, config.log_identity)
 
 ################################################
 # Load files from file mount
