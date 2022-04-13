@@ -7,23 +7,29 @@ from logging import Logger
 from datetime import datetime
 
 class LogBase:
-    def __init__(self, log_name:str, file_share:str):
+    def __init__(self, log_name:str, file_share:str, identity:str = None):
         self.file_share = file_share
         self.log_name = log_name
+        self.identity = identity
 
     def get_logger(self) -> Logger:
-        return LoggingUtils.get_logger(self.file_share, self.log_name)
+        return LoggingUtils.get_logger(self.file_share, self.log_name, self.identity)
 
 class ActivityLog:
     ACTIVITY_BASE = "activity"
 
-    def __init__(self, file_share:str, activity_name:str):
+    def __init__(self, file_share:str, activity_name:str, identity:str = None):
         # Set up base logger
-        timestamp = datetime.now().strftime('%m%d%y')
 
         self.file_share = file_share
         self.activity_name = activity_name
-        self.activity_file = "{}-{}.log".format(self.activity_name,timestamp)
+
+        if identity is not None:
+            if identity is not None:
+                self.activity_file = "{}-{}.log".format(self.activity_name,identity)
+        else:
+            timestamp = datetime.now().strftime('%m%d%y')
+            self.activity_file = "{}-{}.log".format(self.activity_name,timestamp)
 
         self.log_path = os.path.join(self.file_share, ActivityLog.ACTIVITY_BASE)
         self.activity_log_path = os.path.join(self.log_path, self.activity_file)
@@ -55,7 +61,7 @@ class LoggingUtils:
     LOG_BASE = "output"
 
     @staticmethod
-    def get_logger(file_share:str, log_name:str) -> Logger:
+    def get_logger(file_share:str, log_name:str, identity:str = None) -> Logger:
 
         if log_name in LoggingUtils.LOG_UTILS:
             return LoggingUtils.LOG_UTILS[log_name]
@@ -63,6 +69,8 @@ class LoggingUtils:
         # Set up base logger
         timestamp = datetime.now().strftime('%m%d%y')
         LOG_FILE_NAME = "dataloader-{}.log".format(timestamp)
+        if identity is not None:
+            LOG_FILE_NAME = "dataloader-{}.log".format(identity)
 
         working_directory = file_share
         if not working_directory:

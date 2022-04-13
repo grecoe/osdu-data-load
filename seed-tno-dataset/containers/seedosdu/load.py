@@ -18,7 +18,7 @@ config.logger = LoggingUtils.get_logger(config.file_share_mount, config.log_name
 print("Mount path provided: ", config.file_share_mount)
 print("Mount path exists: ", os.path.exists(config.file_share_mount))
 
-activity_log = ActivityLog(config.file_share_mount, "dataload")
+activity_log = ActivityLog(config.file_share_mount, "dataload", config.log_identity)
 
 classes:typing.List[FileClass] = [
     FileClass(["markers"], "csv"),
@@ -66,4 +66,5 @@ for rep in report:
 
 config.logger.info("Completed")
 activity_log.add_activity("Completed dataload process")
+activity_log.dump()
 

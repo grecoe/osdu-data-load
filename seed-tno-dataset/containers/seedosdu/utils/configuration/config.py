@@ -1,5 +1,6 @@
 import os
 import configparser
+import uuid
 from datetime import datetime
 from logging import Logger
 
@@ -19,9 +20,7 @@ class Config:
         self.appId = self._get_environment("EXPERIENCE_CLIENT")
         self.appCred = self._get_environment("EXPERIENCE_CRED")
         self.platformName = self._get_environment("ENERGY_PLATFORM")
-
         self.file_share_mount = self._get_environment("SHARE_MOUNT")
-
 
         # INI 
         self.StorageURL = config.get("CONNECTION", "storage_url").format(self.platformName)
@@ -39,6 +38,12 @@ class Config:
         self.batch_multiplier = int(config.get("LOAD", "batch_multiplier")) 
 
         self.log_name = config.get("LOGGING", "log_name")
+        # If this setting is true, use a UUID to define the log and not the date
+        self.log_identity = None
+        use_identity = config.get("LOGGING", "use_identity")
+        if use_identity.lower() == "true":
+            self.log_identity = str(uuid.uuid1())
+
         self.logger:Logger = None
 
     def _get_environment(self, setting:str) -> str:

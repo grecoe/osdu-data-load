@@ -8,7 +8,7 @@ class Credential(LogBase):
     experience lab key vault. 
     """
     def __init__(self, configuration:Config):
-        super().__init__("Credentials", configuration.file_share_mount)
+        super().__init__("Credentials", configuration.file_share_mount, configuration.log_identity)
         self.configuration = configuration
         self.token = None
 

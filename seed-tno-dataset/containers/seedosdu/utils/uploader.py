@@ -25,7 +25,7 @@ class UploadResults:
 
 class FileUploader(LogBase):
     def __init__(self, file_list:typing.List[str], config:Config, credentials:Credential):
-        super().__init__("Uploader", config.file_share_mount)
+        super().__init__("Uploader", config.file_share_mount, config.log_identity)
         self.file_list:typing.List[str] = file_list
         self.config:Config = config
         self.credentials:Credential = credentials

@@ -10,7 +10,7 @@ AZURE_SUB="YOUR_SUB_ID"
 # Your RG of the deployment
 AZURE_RG="experiencelab-ALIAS"
 # Storage account created from data move with file share
-STORAGE_ACCOUNT="tnodataset7664"
+STORAGE_ACCOUNT="tnodataset2845"
 # File share name
 FILE_STORAGE_SHARE="tnodataset"
 # The share mount location 
@@ -36,7 +36,7 @@ STORAGE_KEY=$(az storage account keys list -g $AZURE_RG -n $STORAGE_ACCOUNT --qu
 echo "Create ACI"
 az container create \
     -g $AZURE_RG \
-    --name tnoseedlocalbuild5 \
+    --name tnodataseedacrz \
     --image $LOAD_IMAGE \
     --cpu 4 \
     --memory 4 \

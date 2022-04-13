@@ -8,7 +8,7 @@ from utils.requests.retryrequests import RequestsRetryCommand, RetryRequestRespo
 class StorageRequests(LogBase):
 
     def __init__(self, configuration:Config, access_token:str):
-        super().__init__("StorageRequests", configuration.file_share_mount)
+        super().__init__("StorageRequests", configuration.file_share_mount, configuration.log_identity)
         self.configuration = configuration
         self.token = access_token
 

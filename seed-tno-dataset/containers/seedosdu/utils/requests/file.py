@@ -15,7 +15,7 @@ class UploadUrl:
 
 class FileRequests(LogBase):
     def __init__(self, configuration:Config, access_token:str):
-        super().__init__("FileRequests", configuration.file_share_mount)
+        super().__init__("FileRequests", configuration.file_share_mount, configuration.log_identity)
         self.configuration:Config = configuration
         self.token:str = access_token
 
