@@ -94,8 +94,7 @@ CLIENT=$(az keyvault secret show --name client-id --vault-name $KEYVAULT --subsc
 SECRET=$(az keyvault secret show --name client-secret --vault-name $KEYVAULT --subscription $AZURE_SUB --query value -otsv)
 
 ACR_LOGIN_SERVER=$(az acr show --name $ACR_REGISTRY --resource-group $AZURE_RG --query loginServer -otsv)
-ACR_USER=$(az acr credential show --name $ACR_REGISTRY --resource-group $AZURE_RG --query username -otsv)
-ACR_PW=$(az acr credential show --name $ACR_REGISTRY --resource-group $AZURE_RG --query passwords[0].value -otsv)
+MANAGED_IDENTITY=$(az resource list -g $AZURE_RG --resource-type Microsoft.ManagedIdentity/userAssignedIdentities --query [].id -otsv)
 
 #######################################################
 # NEW
@@ -111,8 +110,8 @@ az container create \
     --memory 4 \
     --restart-policy Never \
     --registry-login-server $ACR_LOGIN_SERVER \
-    --registry-password $ACR_PW \
-    --registry-username $ACR_USER \
+    --acr-identity $MANAGED_IDENTITY \
+    --assign-identity $MANAGED_IDENTITY \
     --azure-file-volume-share-name $FILE_STORAGE_SHARE \
     --azure-file-volume-account-name $DATA_STORAGE_ACCOUNT \
     --azure-file-volume-account-key $STORAGE_KEY \

@@ -6,11 +6,10 @@ LOAD_IMAGE="open-test-data/tno-seed-osdu:demo"
 az account set -s $AZURE_SUB
 
 # Get container registry information
-echo "Collect information on the ACR instance"
+echo "Collect information from resource group $AZURE_RG"
 ACR_REGISTRY=$(az resource list -g $AZURE_RG --resource-type Microsoft.ContainerRegistry/registries --query [].name -otsv)
 ACR_LOGIN_SERVER=$(az acr show --name $ACR_REGISTRY --resource-group $AZURE_RG --query loginServer -otsv)
-ACR_USER=$(az acr credential show --name $ACR_REGISTRY --resource-group $AZURE_RG --query username -otsv)
-ACR_PW=$(az acr credential show --name $ACR_REGISTRY --resource-group $AZURE_RG --query passwords[0].value -otsv)
+MANAGED_IDENTITY=$(az resource list -g $AZURE_RG --resource-type Microsoft.ManagedIdentity/userAssignedIdentities --query [].id -otsv)
 
 ##############################################
 # Build validation container and push it
@@ -38,8 +37,7 @@ az container create \
     --cpu 2 \
     --image $ACR_DATAMOVEMENT_IMAGE \
     --registry-login-server $ACR_LOGIN_SERVER \
-    --registry-password $ACR_PW \
-    --registry-username $ACR_USER \
+    --acr-identity $MANAGED_IDENTITY \
+    --assign-identity $MANAGED_IDENTITY \
     --restart-policy Never \
     --environment-variables DATA_SEED_IMAGE=$ACR_LOAD_IMAGE ACR=$ACR_REGISTRY SUBSCRIPTION=$AZURE_SUB RESOURCE_GROUP=$AZURE_RG
-
