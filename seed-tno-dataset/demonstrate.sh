@@ -1,5 +1,5 @@
-AZURE_SUB="YOUR_SUB_ID"
-AZURE_RG="experiencelab-ALIAS"
+AZURE_SUB="6cea88f7-c17b-48c1-b058-bec742bc100f"
+AZURE_RG="experiencelab-grecoe"
 DATAMOVEMENT_IMAGE="open-test-data/tno-acquire-data:demo"
 LOAD_IMAGE="open-test-data/tno-seed-osdu:demo"
 

@@ -6,11 +6,11 @@
 ##############################################################
 
 # Your sub where you have it deployed
-AZURE_SUB="YOUR_SUB_ID"
+AZURE_SUB="6cea88f7-c17b-48c1-b058-bec742bc100f"
 # Your RG of the deployment
-AZURE_RG="experiencelab-ALIAS"
+AZURE_RG="experiencelab-grecoe"
 # Storage account created from data move with file share
-STORAGE_ACCOUNT="tnodataset2845"
+STORAGE_ACCOUNT="tnodataset2607"
 # File share name
 FILE_STORAGE_SHARE="tnodataset"
 # The share mount location 
@@ -20,8 +20,8 @@ LOAD_IMAGE="anddang/seedosdu"
 
 # Build the dataload container
 echo "Build the image and push it to dockerhub"
-docker build -t $LOAD_IMAGE ./containers/seedosdu
-docker push $LOAD_IMAGE
+#docker build -t $LOAD_IMAGE ./containers/seedosdu
+#docker push $LOAD_IMAGE
 
 # Get remaining information from the RG itself
 echo "Collect account information"
@@ -36,7 +36,7 @@ STORAGE_KEY=$(az storage account keys list -g $AZURE_RG -n $STORAGE_ACCOUNT --qu
 echo "Create ACI"
 az container create \
     -g $AZURE_RG \
-    --name tnodataseedacrz \
+    --name tnodataseedacr3 \
     --image $LOAD_IMAGE \
     --cpu 4 \
     --memory 4 \

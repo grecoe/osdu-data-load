@@ -49,9 +49,8 @@ az storage share create --name $FILE_STORAGE_SHARE \
    --account-name $DATA_STORAGE_ACCOUNT
 
 echo "Get file share SAS Token"
-SAS_EXPIRATION=$(date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ')
-echo $SAS_EXPIRATION
-SHARE_SAS=$(az storage share generate-sas -n $FILE_STORAGE_SHARE --account-name $DATA_STORAGE_ACCOUNT --https-only --permissions dlrw --expiry 2022-05-08T18:22Z -otsv)
+SAS_EXPIRATION=`date -u -d "@$(( $(busybox date +%s) + 3600 ))" '+%Y-%m-%dT%H:%MZ'`
+SHARE_SAS=$(az storage share generate-sas -n $FILE_STORAGE_SHARE --account-name $DATA_STORAGE_ACCOUNT --https-only --permissions dlrw --expiry $SAS_EXPIRATION -otsv)
 
 
 FILE_SHARE_SAS="https://$DATA_STORAGE_ACCOUNT.file.core.windows.net/$FILE_STORAGE_SHARE/?$SHARE_SAS"
