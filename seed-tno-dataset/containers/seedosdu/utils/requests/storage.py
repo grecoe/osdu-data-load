@@ -5,6 +5,11 @@ from utils.configuration.config import Config
 from utils.requests.retryrequests import RequestsRetryCommand, RetryRequestResponse
 
 
+class StorageFileVersionResponse:
+    def __init__(self, versions:typing.List[str], response:RetryRequestResponse):
+        self.versions:typing.List[str] = versions
+        self.response:RetryRequestResponse = response
+
 class StorageRequests(LogBase):
 
     def __init__(self, configuration:Config, access_token:str):
@@ -12,7 +17,7 @@ class StorageRequests(LogBase):
         self.configuration = configuration
         self.token = access_token
 
-    def get_file_versions(self, file_identifier:str) -> typing.List[str]:
+    def get_file_versions(self, file_identifier:str) -> StorageFileVersionResponse:
 
         logger:Logger = self.get_logger()
 
@@ -41,5 +46,5 @@ class StorageRequests(LogBase):
             print("Failed to acquire versions - {}".format(file_identifier))
             logger.warn("Failed to acquire versions : C:{} E:{}".format(response.status_code, response.error))
 
-        return return_value
+        return StorageFileVersionResponse(return_value, response)
 

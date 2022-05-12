@@ -13,13 +13,23 @@ class UploadUrl:
         for key in upload_response:
             setattr(self, key, upload_response[key])
 
+class FileUploadUrlResponse:
+    def __init__(self, url:UploadUrl, response:RetryRequestResponse):
+        self.url:UploadUrl = url
+        self.response:RetryRequestResponse = response
+
+class FileUploadMetadataResponse:
+    def __init__(self, id:str, response:RetryRequestResponse):
+        self.id:str = id
+        self.response:RetryRequestResponse = response
+
 class FileRequests(LogBase):
     def __init__(self, configuration:Config, access_token:str):
         super().__init__("FileRequests", configuration.file_share_mount, configuration.log_identity)
         self.configuration:Config = configuration
         self.token:str = access_token
 
-    def get_upload_url(self) -> UploadUrl:
+    def get_upload_url(self) -> FileUploadUrlResponse:
 
         logger:Logger = self.get_logger()
 
@@ -33,7 +43,6 @@ class FileRequests(LogBase):
         )
 
         if response.attempts > 1:
-            #TODO 
             message = f"get_upload_url - {response.action} on {response.url} attempts : {response.attempts}"
             print(message)
             logger.info(message)
@@ -45,7 +54,7 @@ class FileRequests(LogBase):
             print("Failed to get upload url - {}".format(response.status_code))
             logger.warn("Failed to get upload url : C:{} E:{}".format(response.status_code, response.error))
 
-        return return_value
+        return FileUploadUrlResponse(return_value, response)
 
     def upload_file(self, url:UploadUrl, file_path:str) -> bool:
         logger:Logger = self.get_logger()
@@ -66,7 +75,7 @@ class FileRequests(LogBase):
 
         return upload_success
         
-    def upload_metadata(self, metadata:dict) -> str:
+    def upload_metadata(self, metadata:dict) -> FileUploadMetadataResponse:
 
         logger:Logger = self.get_logger()
 
@@ -92,5 +101,5 @@ class FileRequests(LogBase):
             print("Failed to upload metadata - {}".format(response.status_code))
             logger.warn("Failed to upload metadata : C:{} E:{}".format(response.status_code, response.error))
 
-        return return_value
+        return FileUploadMetadataResponse(return_value, response)
 

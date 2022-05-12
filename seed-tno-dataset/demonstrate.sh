@@ -1,5 +1,5 @@
-AZURE_SUB="6cea88f7-c17b-48c1-b058-bec742bc100f"
-AZURE_RG="experiencelab-grecoe"
+AZURE_SUB="YOUR_AZURE_SUBSCRIPITON"
+AZURE_RG="AZURE_RG_WITH_OSDU_DEPLOYMENT"
 DATAMOVEMENT_IMAGE="open-test-data/tno-acquire-data:demo"
 LOAD_IMAGE="open-test-data/tno-seed-osdu:demo"
 
@@ -30,7 +30,7 @@ az acr build -t $DATAMOVEMENT_IMAGE -r $ACR_REGISTRY -g $AZURE_RG ./containers/d
 ACR_DATAMOVEMENT_IMAGE="$ACR_LOGIN_SERVER/$DATAMOVEMENT_IMAGE"
 ACR_LOAD_IMAGE="$ACR_LOGIN_SERVER/$LOAD_IMAGE"
 
-CONTAINER_NAME="tnodataloadacr"
+CONTAINER_NAME="tnoloadosdu"
 az container create \
     -g $AZURE_RG \
     --name $CONTAINER_NAME \

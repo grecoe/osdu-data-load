@@ -6,16 +6,17 @@ from logging import Logger
 from datetime import datetime
 
 class LogBase:
-    def __init__(self, log_name:str, file_share:str, identity:str = None):
+    def __init__(self, log_name:str, file_share:str, identity:str = None, is_workflow:bool = False):
         self.file_share = file_share
         self.log_name = log_name
         self.identity = identity
+        self.is_workflow = is_workflow
 
     def get_logger(self) -> Logger:
-        return LoggingUtils.get_logger(self.file_share, self.log_name, self.identity)
+        return LoggingUtils.get_logger(self.file_share, self.log_name, self.identity, self.is_workflow)
 
 class ActivityLog:
-    ACTIVITY_BASE = "activity"
+    ACTIVITY_BASE = "output"
 
     def __init__(self, file_share:str, activity_name:str, identity:str = None):
         # Set up base logger
@@ -23,9 +24,11 @@ class ActivityLog:
         self.file_share = file_share
         self.activity_name = activity_name
 
+        if not self.file_share:
+            self.file_share = os.getcwd()
+
         if identity is not None:
-            if identity is not None:
-                self.activity_file = "{}-{}.log".format(self.activity_name,identity)
+            self.activity_file = "{}-{}.log".format(self.activity_name,identity)
         else:
             timestamp = datetime.now().strftime('%m%d%y')
             self.activity_file = "{}-{}.log".format(self.activity_name,timestamp)
@@ -60,16 +63,20 @@ class LoggingUtils:
     LOG_BASE = "output"
 
     @staticmethod
-    def get_logger(file_share:str, log_name:str, identity:str = None) -> Logger:
+    def get_logger(file_share:str, log_name:str, identity:str = None,  is_workflow:bool = False) -> Logger:
 
         if log_name in LoggingUtils.LOG_UTILS:
             return LoggingUtils.LOG_UTILS[log_name]
 
+        log_base_start = "activity"
+        if is_workflow:
+            log_base_start = "workflow"
+
         # Set up base logger
         timestamp = datetime.now().strftime('%m%d%y')
-        LOG_FILE_NAME = "dataloader-{}.log".format(timestamp)
+        LOG_FILE_NAME = "{}-{}.log".format(log_base_start, timestamp)
         if identity is not None:
-            LOG_FILE_NAME = "dataloader-{}.log".format(identity)
+            LOG_FILE_NAME = "{}-{}.log".format(log_base_start, identity)
 
         working_directory = file_share
         if not working_directory:

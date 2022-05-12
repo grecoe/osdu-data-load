@@ -1,10 +1,12 @@
 import os
 import typing
+import json
 from utils.configuration.config import Config
 from utils.requests.auth import Credential
 from utils.uploader import FileUploader, UploadResults
 from utils.logutil import LoggingUtils, ActivityLog
 from utils.fileshare.mount import FileClass, Mount
+
 
 ################################################
 # Load Configuration (environment and ini file)
@@ -23,7 +25,7 @@ activity_log = ActivityLog(config.file_share_mount, "dataload", config.log_ident
 classes:typing.List[FileClass] = [
     FileClass(["markers"], "csv"),
     FileClass(["trajectories"], "csv"),
-    FileClass(["USGS_docs"], "pdf"),
+    FileClass(["documents"], "pdf"),
     FileClass(["well-logs"], "las"),
 ]
 
@@ -63,6 +65,7 @@ for c in classes:
 
 for rep in report:
     config.logger.info(rep)
+
 
 config.logger.info("Completed")
 activity_log.add_activity("Completed dataload process")

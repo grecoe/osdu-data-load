@@ -19,7 +19,13 @@ FILE_STORAGE_SHARE="tnodataset"
 # Settings for AZ Copy
 #######################################################
 #TNOFULLDATASET="https://oaklabexperience.blob.core.windows.net/open-test-data"
-TNODATASET="https://azureingestiondata.blob.core.windows.net/tno-datasets"
+
+# WAS the set I was using but it changed.....most of the directories are the same BUT
+# I think the documents changed....but I can't see the container contents now in the 
+# new blob container:)
+#TNODATASET="https://azureingestiondata.blob.core.windows.net/tno-datasets"
+
+TNODATASET="https://opentestdatatest.blob.core.windows.net/tno-dataset"
 AZCOPYLOCATION="./azcopy"
 AZCOPYTAR=$(ls $AZCOPYLOCATION)
 
@@ -101,9 +107,10 @@ MANAGED_IDENTITY=$(az resource list -g $AZURE_RG --resource-type Microsoft.Manag
 
 echo "Create container instance for image $DATASEED_IMAGE"
 SHARE_MOUNT_PATH="/mnt/tnodataset"
+CONTAINER_NM_ACR="tnoseedosdu"
 az container create \
     -g $AZURE_RG \
-    --name tnodataseedacr \
+    --name  $CONTAINER_NM_ACR \
     --image $DATASEED_IMAGE \
     --cpu 4 \
     --memory 4 \

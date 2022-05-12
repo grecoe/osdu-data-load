@@ -15,12 +15,16 @@ class RetryRequestResponse:
         self.kwargs = kwargs
         # Status code if found
         self.status_code = None
+        # All status codes
+        self.status_codes = []
         # Attempts to get there
         self.attempts = 0
         # Result if any
         self.result = None
         # Error if found
         self.error = None
+        # Connection errors
+        self.connection_errors = []
 
     def __str__(self):
         return "ACTION: {}\nURL: {}\nKWARGS: {}\nCODE: {}\nATTEMPTS: {}\nRESULT: {}\nERROR: {}\n".format(
@@ -111,6 +115,7 @@ class RequestsRetryCommand:
             try:
                 response = fn(url, **kwargs)
                 retry_response.status_code = response.status_code
+                retry_response.status_codes.append(response.status_code)
 
                 # If response in acceptable range, use it and get out, if 
                 # not in the retry range report it and get out. 
@@ -141,9 +146,12 @@ class RequestsRetryCommand:
                 #ConnectionResetError
                 #NewConnectionError
                 retry_response.error = str(ex)
+                retry_response.connection_errors.append("CONN EX: {} {}".format(fn.__name__, url))
                 if not RequestsRetryCommand.ALLOW_CONNECTION_ERROR_RETRY:
                     break
             except Exception as ex:
+                retry_response.error = str(ex)
+                retry_response.connection_errors.append("EX : {} {}".format(fn.__name__, url))
                 retry_response.error = str(ex)
 
             # We didn't get a fatal nor a success, let system recover for retry
