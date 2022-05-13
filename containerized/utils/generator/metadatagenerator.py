@@ -26,7 +26,7 @@ class MetadataGenerator:
             "data": {
                 "DatasetProperties": {
                     "FileSourceInfo": {
-                        "FileSource": "UPLOAD_URL",
+                        "FileSource": "||UPLOAD_URL||",
                         "Name" : os.path.split(fileName)[-1]
                     }
                 }

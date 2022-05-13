@@ -5,28 +5,44 @@ from actions.workflowaction import WorkflowAction
 
 # TODO: Upload logs to fileshare.
 
+import os
+def verify_required_environment(expected_entries:list):
+    for entry in expected_entries:
+        if entry not in os.environ:
+            raise Exception("{} required for this stage".format(entry))
+
+
+
+
 ################################################################################
 # General :
 #  Load configuration from settings.ini or from environment 
-configuration = Config("./settings.ini")
+#configuration = Config("./settings.ini")
+
+# Verify all required settings are in the environment
+verify_required_environment ( 
+    [
+        "DATA_PLATFORM",
+        "RECORD_STORAGE_ACCOUNT",
+        "RECORD_ACCOUNT_KEY",
+        "RECORD_SHARE_NAME",
+        "FILE_SHARE_NAME",
+        "DATA_SOURCE_ACCOUNT",
+        "DATA_SOURCE_ACCOUNT_KEY",
+        "DATA_SOURCE_ACCOUNT_SHARE",
+        "DATA_SOURCE_MAP"
+    ]
+)
+
+configuration = Config.get_load_configuration("./settings.ini")
+
 
 ################################################################################
 # Container 1 : Scanning
 #   Scan Customer storage account using filters and record all files that have
 #   not previously been added to the table (if any)
-# Required Environment Parameters
-#   DATA_SOURCE_ACCOUNT
-#   DATA_SOURCE_ACCOUNT_KEY
-#   DATA_SOURCE_ACCOUNT_SHARE
-#   RECORD_STORAGE_ACCOUNT
-#   RECORD_ACCOUNT_KEY
-#   RECORD_SHARE_NAME
-#   * TODO: DATA_PLATFORM
-# Also required ./settings.ini -> LOAD, WORKLOADS
 #
 # TODO
-#   Pass in platform name and use INI settings for ACL/Legal
-#   Parrallize the processing of documents in Scan Action
 #   Pass in ACR and OSDU Credentials to pass through to process container
 #   Try and keep ALL activity to the launch script so no az login required.
 #       Problem - az acr build requires an az acr login...how to resolve.
@@ -55,16 +71,8 @@ if len(workloads) == 0:
 #   records in the table store, create list of records and use parallel to 
 #   process them as was done before.  
 # Required Environment Parameters
-#   RECORD_STORAGE_ACCOUNT
-#   RECORD_ACCOUNT_KEY
-#   RECORD_SHARE_NAME
-#   * WORKLOAD_FILE --> NEW TRY USING ABOVE AS A START
 #   TODO:
 #   ACR /login server
-#   OSDU Credentials for calling endpoints
-#   DATA_PLATFORM
-#   FILE_SHARE_NAME
-# Also required ./settings.ini -> LOAD, WORKLOADS, CONNECTION, REQUEST
 
 ## DEBUG ONLY BECAUSE FILE SHOULD BE IN FILE SHARE
 ## Following code expects FILE_SHARE_MOUNT to be in environment as well
@@ -80,10 +88,9 @@ record_share_util = FileShareUtil(
     configuration.record_account_key, 
     configuration.record_account_share)
 
-
 for workload in workloads:
-    LOCAL_WORKLOADS.append(os.path.join(SHARE_MOUNT, workload))
     work = os.path.split(workload)
+    LOCAL_WORKLOADS.append(os.path.join(SHARE_MOUNT, work[1]))
     record_share_util.download_file(SHARE_MOUNT, work[0], work[1])
 
 print("Create local workloads done....")
@@ -99,7 +106,20 @@ for loc in LOCAL_WORKLOADS:
         os.environ["WORKFLOW_RECORD"] = loc
         ## DEBUG ONLY BECAUSE WORKFLOW SHOULD FLOW INTO THE ENVIRONMENT FROM CALLER
 
-        configuration = Config("./settings.ini")
+        verify_required_environment ( 
+            [
+                "DATA_PLATFORM",
+                "RECORD_STORAGE_ACCOUNT",
+                "RECORD_ACCOUNT_KEY",
+                "RECORD_SHARE_NAME",
+                "FILE_SHARE_NAME",
+                "WORKFLOW_RECORD",
+                "PLATFORM_TENANT",
+                "PLATFORM_CLIENT",
+                "PLATFORM_SECRET"
+            ]
+        )
+        configuration = Config.get_workflow_configuration("./settings.ini")
 
         workflow = WorkflowAction(configuration)
         workflow.process_records()

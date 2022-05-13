@@ -63,7 +63,7 @@ class FileUploader(LogBase):
         self.config:Config = config
         self.credentials:Credential = credentials
 
-    def upload_files(self) -> UploadResults:
+    def upload_files(self) -> UploadResults: 
 
         n_cores = multiprocessing.cpu_count()
         n_jobs = self.config.batch_multiplier * n_cores

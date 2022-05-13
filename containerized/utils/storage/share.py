@@ -132,10 +132,9 @@ class FileShareUtil:
         )
 
         # Make path match the incoming folder as well
-        folder_path = os.path.join(local_folder, folder)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-        file_path = os.path.join(folder_path, file)
+        if not os.path.exists(local_folder):
+            os.makedirs(local_folder)
+        file_path = os.path.join(local_folder, file)
 
         with open(file_path, "wb") as file_handle:
             data = file_client.download_file()

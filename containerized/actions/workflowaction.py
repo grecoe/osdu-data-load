@@ -9,6 +9,10 @@ from utils.storage.storagetable import AzureTableStoreUtil
 from utils.storage.record import Record
 from utils.storage.share import FileShareUtil
 from utils.generator.metadatagenerator import MetadataGenerator
+from utils.requests.auth import Credential
+from utils.requests.fileservice import FileRequests, FileUploadUrlResponse, UploadUrl
+from utils.requests.storageservice import StorageRequests
+
 from utils.log.logutil import LogBase, Logger
 from joblib import Parallel, delayed
 
@@ -93,8 +97,16 @@ class WorkflowAction(LogBase):
         max_batch = math.ceil(len(record_list)/n_jobs)
 
         # TODO: File and Storage Services
-        file_requests = None
-        storage_requests = None
+        # Utilities for processing
+        client_credentials = Credential(self.configuration)
+        file_requests = FileRequests(self.configuration, client_credentials.get_application_token())
+        storage_requests = StorageRequests(self.configuration, client_credentials.get_application_token())
+        metadata_storage = FileShareUtil(
+            self.configuration.record_account,
+            self.configuration.record_account_key,
+            self.configuration.record_account_share
+        )
+        
         batch_results:typing.List[RecordUploadResult] = []
 
         # Process batches
@@ -108,7 +120,7 @@ class WorkflowAction(LogBase):
             logger.info(batch_message)
 
             try:
-                batch_results += Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._process_single_record)(record, file_requests, storage_requests) for record in record_batch)
+                batch_results += Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._process_single_record)(record, metadata_storage, file_requests, storage_requests) for record in record_batch)
             except Exception as ex:
                 logger.info("Generic Exception - Processing")
                 logger.info(str(ex))
@@ -171,15 +183,68 @@ class WorkflowAction(LogBase):
         return return_item
 
 
-    def _process_single_record(self, record:Record, file_requests, storage_requests) -> RecordUploadResult:
+    def _process_single_record(
+        self, 
+        record:Record,
+        metadata_storage:FileShareUtil, 
+        file_requests:FileRequests, 
+        storage_requests:StorageRequests) -> RecordUploadResult:
         
         logger:Logger = self.get_logger()
 
-        # TODO - Actual upload to OAK
+        # Prepare a return result
         return_result:RecordUploadResult = RecordUploadResult()
         return_result.file_name = record.file_name
         return_result.record_identity = record.RowKey
-        return_result.succeeded = True
+        return_result.succeeded = False
+
+        # Stored metadata location -> records/FI.json
+        # Get the metadata 
+        stored_metadata = os.path.split(record.metadata)
+        folder = stored_metadata[0]
+        file = stored_metadata[1]
+        local_folder = "./"
+        local_file = os.path.join(local_folder, file)
+
+        metadata_storage.download_file(local_folder, folder, file )
+        if os.path.exists(local_file):
+            # We have issues if the metadata is not there.
+            raw_meta = None
+            with open(local_file, "r") as meta_file:
+                raw_meta = meta_file.readlines()
+                raw_meta = "\n".join(raw_meta)
+            
+            os.remove(local_file)
+
+            if "||UPLOAD_URL||" not in raw_meta:
+                logger.error("Invalid Metadata recieved for : {}".format(record.metadata))
+                return return_result
+
+        # Get upload URL and then force it in the metadata
+        upload_response:FileUploadUrlResponse = file_requests.get_upload_url()
+
+        if upload_response.url:
+            raw_meta = raw_meta.replace("||UPLOAD_URL||", upload_response.url.FileSource)
+            functional_meta = json.loads(raw_meta)
+
+            ## Step 2 - Upload File using SAS URL if we can
+            # we Can - https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/storage/azure-storage-blob/samples/blob_samples_copy_blob.py
+            ## Step 3 - Upload metadata 
+            ## Step 3 - Get file version 
+            ## See uploader.py 158
+            print("Functional Metadata:")
+            print(json.dumps(functional_meta, indent=4))
+            #return_result.file_source = upload_response.url.FileSource
+
+            return_result.file_source = upload_response.url.FileSource
+            return_result.succeeded = True
+
+            # TODO - Complete the process to upload file then metadata and collect 
+            #        other information.
+            #return_result.status_codes = []
+            #return_result.file_version = None
+            #return_result.connection_errors = None
+            #return_result.file_id = None
 
         return return_result
 
