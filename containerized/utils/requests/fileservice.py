@@ -1,5 +1,7 @@
+from distutils.command.upload import upload
 import os
 import requests
+import time
 from utils.log.logutil import LogBase, Logger
 from utils.configuration.configutil import Config
 from utils.requests.retryrequest import RequestsRetryCommand, RetryRequestResponse
@@ -55,6 +57,49 @@ class FileRequests(LogBase):
             logger.warn("Failed to get upload url : C:{} E:{}".format(response.status_code, response.error))
 
         return FileUploadUrlResponse(return_value, response)
+
+    def transfer_file(self, file_size_mb:int, url:UploadUrl, sas_url:str) -> bool:
+        """
+        url: retrieved from getUploadUrl
+        sas_url: the blob to move
+        """
+        logger:Logger = self.get_logger()
+
+        upload_success = False
+
+        target_blob = BlobClient.from_blob_url(url.SignedURL)
+
+        # Copy started
+        target_blob.start_copy_from_url(sas_url)
+
+        # TODO Just try and sleep, we have no right on the blob to get it's properties
+        # so this is an issue.....we'll have to wait some amount of time to see
+        # if size becomes an issue
+        sleep_time = file_size_mb * 1
+        time.sleep(sleep_time)
+
+        upload_success = True
+        """
+        for i in range(10):
+            # This line throws an auth exception
+            props = target_blob.get_blob_properties()
+            status = props.copy.status
+            print("Copy status: " + status)
+            if status == "success":
+                # Copy finished
+                logger.info("File trasnfer succesful")
+                upload_success = True
+                break
+            time.sleep(10)
+
+        if upload_success == False:
+            # if not finished after 100s, cancel the operation
+            props = target_blob.get_blob_properties()
+            logger.warn("File trasnfer succesful failed : {}".format(props.copy.status))
+            copy_id = props.copy.id
+            target_blob.abort_copy(copy_id)
+        """        
+        return upload_success
 
     def upload_file(self, url:UploadUrl, file_path:str) -> bool:
         logger:Logger = self.get_logger()

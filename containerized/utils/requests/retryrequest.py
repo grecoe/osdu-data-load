@@ -98,9 +98,6 @@ class RequestsRetryCommand:
         elif not url:
             raise Exception("URL is a required parameter")
 
-        # TODO : DEBUG REMOVE
-        print("URL :", url)
-        
         retry_response = RetryRequestResponse(url, kwargs)
         retry_response.action = fn.__name__
 

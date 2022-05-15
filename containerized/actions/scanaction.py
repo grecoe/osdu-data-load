@@ -132,6 +132,7 @@ class ScanAction(LogBase):
             # Add an entry to the storage table for this file. 
             r = Record(self.configuration.record_storage_partition)
             r.file_name = file_name
+            r.file_size = source_file.file_size
             r.source_sas = source_file.file_url
             r.metadata = "{}/{}".format(self.configuration.record_metadata_path, metadata_file)
         

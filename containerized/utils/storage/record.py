@@ -10,9 +10,11 @@ class Record:
         self.RowKey = str(uuid.uuid1())
         self.processed_time = ""
         self.file_name = ""
+        self.file_size=0
         self.source_sas = ""
         self.metadata = ""
         self.container_id = ""
+        self.meta_id = ""
         self.processed = False
 
     def get_entity(self):

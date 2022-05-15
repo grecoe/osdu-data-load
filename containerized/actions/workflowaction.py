@@ -8,10 +8,9 @@ from utils.configuration.configutil import Config
 from utils.storage.storagetable import AzureTableStoreUtil
 from utils.storage.record import Record
 from utils.storage.share import FileShareUtil
-from utils.generator.metadatagenerator import MetadataGenerator
 from utils.requests.auth import Credential
-from utils.requests.fileservice import FileRequests, FileUploadUrlResponse, UploadUrl
-from utils.requests.storageservice import StorageRequests
+from utils.requests.fileservice import FileRequests, FileUploadUrlResponse, FileUploadMetadataResponse
+from utils.requests.storageservice import StorageRequests, StorageFileVersionResponse
 
 from utils.log.logutil import LogBase, Logger
 from joblib import Parallel, delayed
@@ -167,6 +166,7 @@ class WorkflowAction(LogBase):
                 success_record = find_record[0]
                 success_record.container_id = self.configuration.log_identity
                 success_record.processed = True
+                success_record.meta_id = execution_result.file_id
                 success_record.processed_time = str(datetime.utcnow())
 
                 table_util.update_record(self.configuration.record_storage_table, success_record)
@@ -189,6 +189,28 @@ class WorkflowAction(LogBase):
         metadata_storage:FileShareUtil, 
         file_requests:FileRequests, 
         storage_requests:StorageRequests) -> RecordUploadResult:
+        """
+        Processes a single record into OSDU with all of the stages required
+        - Download metadata from record store
+        - Get an upload URL
+        - Update the meta with fileSource
+        - Upload record
+        - Upload metadata
+        - Get file version
+
+        File only succesful if all above steps succeed. 
+
+        Transfer file is a BIG issue because we don't have rights to the SAS given by 
+        OSDU so we might need to tweak random sleep times based on file size?
+
+        Timing for a single record shows the issue:
+
+            ***DOWNLOAD META : 0.628114
+            ***GET UPLOAD URL : 0.90549
+            *** TRANSFER FILE : 10.652775
+            *** UPLOAD METADATA : 2.250204
+            *** GET VERSION : 0.529724        
+        """
         
         logger:Logger = self.get_logger()
 
@@ -198,14 +220,18 @@ class WorkflowAction(LogBase):
         return_result.record_identity = record.RowKey
         return_result.succeeded = False
 
+        ################################################################
         # Stored metadata location -> records/FI.json
-        # Get the metadata 
+        # Get the metadata file 
         stored_metadata = os.path.split(record.metadata)
         folder = stored_metadata[0]
         file = stored_metadata[1]
         local_folder = "./"
         local_file = os.path.join(local_folder, file)
 
+        # TODO - REMOVE
+        start = datetime.utcnow()
+        # TODO - REMOVE
         metadata_storage.download_file(local_folder, folder, file )
         if os.path.exists(local_file):
             # We have issues if the metadata is not there.
@@ -219,25 +245,97 @@ class WorkflowAction(LogBase):
             if "||UPLOAD_URL||" not in raw_meta:
                 logger.error("Invalid Metadata recieved for : {}".format(record.metadata))
                 return return_result
+        # TODO - REMOVE
+        end = datetime.utcnow()
+        logger.info("***DOWNLOAD META : {}".format((end-start).total_seconds()))
+        # TODO - REMOVE
 
+        ################################################################
         # Get upload URL and then force it in the metadata
+        # TODO - REMOVE
+        start = datetime.utcnow()
+        # TODO - REMOVE
         upload_response:FileUploadUrlResponse = file_requests.get_upload_url()
+        # TODO - REMOVE
+        end = datetime.utcnow()
+        logger.info("***GET UPLOAD URL : {}".format((end-start).total_seconds()))
+        # TODO - REMOVE
+
+        if upload_response.response.attempts > 1:
+            print("TODO Get UploadUrl attempts : {}".format(upload_response.response.attempts))
 
         if upload_response.url:
+            return_result.file_source = upload_response.url.FileSource
             raw_meta = raw_meta.replace("||UPLOAD_URL||", upload_response.url.FileSource)
             functional_meta = json.loads(raw_meta)
 
-            ## Step 2 - Upload File using SAS URL if we can
-            # we Can - https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/storage/azure-storage-blob/samples/blob_samples_copy_blob.py
-            ## Step 3 - Upload metadata 
-            ## Step 3 - Get file version 
-            ## See uploader.py 158
-            print("Functional Metadata:")
-            print(json.dumps(functional_meta, indent=4))
-            #return_result.file_source = upload_response.url.FileSource
+            ################################################################
+            # Upload the file from customer storage to OSDU
+            # TODO - REMOVE
+            start = datetime.utcnow()
+            # TODO - REMOVE
 
-            return_result.file_source = upload_response.url.FileSource
-            return_result.succeeded = True
+            # TODO Test
+            file_size_mb = int(record.file_size) / (1024 * 1024)
+            file_size_mb = int(math.floor(file_size_mb) / 2)
+
+            if file_requests.transfer_file(file_size_mb, upload_response.url, record.source_sas):
+                logger.info("File succesfully uploaded")
+
+                # TODO - REMOVE
+                end = datetime.utcnow()
+                logger.info("*** TRANSFER FILE : {}".format((end-start).total_seconds()))
+                # TODO - REMOVE
+
+                ################################################################
+                # Upload the metadata to OSDU
+                # TODO - REMOVE
+                start = datetime.utcnow()
+                # TODO - REMOVE
+                upload_meta_response:FileUploadMetadataResponse = file_requests.upload_metadata(functional_meta)
+                # TODO  ? return_result.updateStatus(upload_meta_response.response)
+                if upload_meta_response.response.attempts > 1:
+                    print("TODO Upload metadata attempts : {}".format(upload_meta_response.response.attempts))
+                # TODO - REMOVE
+                end = datetime.utcnow()
+                logger.info("*** UPLOAD METADATA : {}".format((end-start).total_seconds()))
+                # TODO - REMOVE
+
+                return_result.file_id = upload_meta_response.id
+
+                if return_result.file_id:
+                    ################################################################
+                    # Get file version to verify it made it
+                    # TODO - REMOVE
+                    start = datetime.utcnow()
+                    # TODO - REMOVE
+                    versions_response:StorageFileVersionResponse = storage_requests.get_file_versions(return_result.file_id)
+                    # TODO - REMOVE
+                    end = datetime.utcnow()
+                    logger.info("*** GET VERSION : {}".format((end-start).total_seconds()))
+                    # TODO - REMOVE
+
+                    # TODO ? return_result.updateStatus(versions_response.response)
+                    if versions_response.response.attempts > 1:
+                        print("TODO Get Version attempts : {}".format(versions_response.response.attempts))
+                
+                    if versions_response.versions:
+                        return_result.file_version = versions_response.versions[0]
+                        return_result.succeeded = True
+                    else:
+                        print("TODO: GET VERSION FAILED")
+                        logger.error(f"Failed to get file versions for {record.file_name}")
+                else:
+                        print("TODO: GET ID FAILED")
+                        logger.error(f"Failed to get file ID on metadata for {record.file_name}")
+        
+            else:
+                print("TODO: UPLOAD FAILED")
+                logger.error("File {} failed to upload".format(record.file_name))
+
+        else:
+            print("TODO: NO UPLOAD URL")
+            logger.error("Failed to get upload url for {}".format(record.file_name))
 
             # TODO - Complete the process to upload file then metadata and collect 
             #        other information.

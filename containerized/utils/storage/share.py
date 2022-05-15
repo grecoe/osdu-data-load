@@ -17,6 +17,7 @@ class FileDetails:
         self.file_name=None
         self.file_path=None
         self.file_url=None
+        self.file_size=0
 
 class FileShareUtil:
     def __init__(self, account_name:str, account_key:str, share_name:str):
@@ -93,6 +94,7 @@ class FileShareUtil:
             for share_file in file_list:
                 detail = FileDetails()
                 detail.file_name = share_file.name
+                detail.file_size = share_file.size
                 detail.file_path = directory
                 detail.file_url = os.path.join(
                     self.file_url, 
