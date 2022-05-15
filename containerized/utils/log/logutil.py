@@ -68,7 +68,7 @@ class LoggingUtils:
         if log_name in LoggingUtils.LOG_UTILS:
             return LoggingUtils.LOG_UTILS[log_name]
 
-        log_base_start = "activity"
+        log_base_start = "stgscan"
         if is_workflow:
             log_base_start = "workflow"
 

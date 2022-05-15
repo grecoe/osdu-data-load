@@ -18,6 +18,21 @@ class ScanAction(LogBase):
         self.configuration = configuration
 
     def scan_customer_storage(self):
+        """
+        Scans a storage account identified in the configuration with the data stored in the
+        configuration settings (representing an Azure File Share)
+        
+        self.configuration.source_account  
+        self.configuration.source_account_key 
+        self.configuration.source_account_share
+
+        And filters items based on 
+        self.configuration.data_source_map
+
+        It creates two items per file found
+            - Record in an Azure Storage table tracking the file
+            - Metadata record in Azure Storage File share for later use in uploading
+        """
 
         # Get our logger
         logger:Logger = self.get_logger()
@@ -52,9 +67,11 @@ class ScanAction(LogBase):
         # Make sure output folders exist for metadata generation
         record_share_util.create_directory(self.configuration.record_metadata_path)
 
+
+        ######################################################################
+        # Filter messages from the storage based on the data_source_map
         logger.info("Source Map:")
         logger.info(self.configuration.data_source_map)
-        
         for path in self.configuration.data_source_map: 
 
             # If the path is created, then it clearly has no files and should be skipped
@@ -74,6 +91,8 @@ class ScanAction(LogBase):
             max_batch = math.ceil(len(files)/n_jobs)
             process_results:typing.List[str] = []
             
+            ######################################################################
+            # For each file path (directory) process the files. 
             logger.info("Files to process in path : {}: {}".format(path, len(files)))
             for file_batch in self._batch(files, n_jobs):
 
@@ -100,7 +119,25 @@ class ScanAction(LogBase):
         record_share_util:FileShareUtil,
         table_util:AzureTableStoreUtil 
         ) -> str:
-        
+        """
+        Batch process for each file. Checks to see if the record has already been recorded
+        in the Azure Storage table. If so, it is ignored, if not:
+
+        - Generate the metadata to associate with the original file, and upload it to the 
+          record file share 
+        - Create an Azure Table Storage entry with information about the file. 
+
+        Parameters:
+
+        path:
+            The path in the external share for this file. 
+        source_file:
+            Details about the source file from the external file share, including the SAS URL 
+        record_share_util:
+            Azure Storage File Share to store metadata in
+        table_util:
+            Azure Storage Table to record the file
+        """
         return_value = "0"
 
         logger:Logger = self.get_logger()
@@ -142,6 +179,8 @@ class ScanAction(LogBase):
         return return_value
 
     def _batch(self, items:typing.List[FileDetails], batch_size:int) -> typing.List[str]:
+        """Batch a list of file detailsbased on size of batch requested and returns a sub list
+        with that many items in it until it is exhausted"""
         idx = 0
         while idx < len(items):
             yield items[idx: idx + batch_size]

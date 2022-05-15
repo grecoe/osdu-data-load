@@ -9,6 +9,7 @@ from utils.storage.storagetable import AzureTableStoreUtil
 from utils.storage.record import Record
 from utils.storage.share import FileShareUtil
 from utils.requests.auth import Credential
+from utils.requests.retryrequest import RetryRequestResponse
 from utils.requests.fileservice import FileRequests, FileUploadUrlResponse, FileUploadMetadataResponse
 from utils.requests.storageservice import StorageRequests, StorageFileVersionResponse
 
@@ -17,17 +18,43 @@ from joblib import Parallel, delayed
 
 class RecordUploadResult:
     def __init__(self):
+        # Flag indicating succesful processing
         self.succeeded:bool = False
+        # Record ID in storage table
         self.record_identity:str = None
+        # File name to process
         self.file_name = None
-
-        # TODO on the following when we bring over the requests
+        # Metadata id in OSDU
         self.file_id:str = None
+        # File source from UploadURL
         self.file_source:str = None
+        # File version after upload to OSDU
         self.file_version:str = None
+        # Status code, will use this if it failse
+        self.status_code = None
+        # Series of status codes during upload
         self.status_codes = {}
+        # Series of connection errors during upload
         self.connection_errors = {}
+        # Total number of attempts in talking with OSDU
+        self.total_attempts = 0
 
+    def update_status(self, response:RetryRequestResponse):
+        
+        self.total_attempts += response.attempts
+        self.status_code = response.status_code
+
+        if response.status_codes:
+            for code in response.status_codes:
+                if code not in self.status_codes:
+                    self.status_codes[code] = 0
+                self.status_codes[code] += 1
+
+        if len(response.connection_errors):
+            for val in response.connection_errors:
+                if val not in self.connection_errors:
+                    self.connection_errors[val] = 0
+                self.connection_errors[val] += 1
 
 class WorkflowAction(LogBase):
     def __init__(self, configuration:Config):
@@ -35,10 +62,15 @@ class WorkflowAction(LogBase):
         self.configuration = configuration
 
     def process_records(self):
+        """
+        Processes a group of records that have been fed into the process. The records come in a form
+        of record id in the storage table. 
 
+        """
         logger:Logger = self.get_logger()
 
-        # Figure out batch sizing 
+        ######################################################################
+        # Figure out batch sizing and dump out basics 
         n_cores = multiprocessing.cpu_count()
         n_jobs = int(self.configuration.batch_multiplier) * n_cores
 
@@ -54,7 +86,10 @@ class WorkflowAction(LogBase):
             self.configuration.record_account, 
             self.configuration.record_account_key)
 
-        # Load the file with the record ID's in the table.
+        ######################################################################
+        # Load the file with the record ID's in the table.File is contained in the file 
+        # share associated with the container. This is mimicked locally by just setting
+        # file share to "./"
         workflow_items:typing.List[str] = []
         with open(self.configuration.workflow_record, "r") as workflow_tasks:
             file_data = workflow_tasks.readlines()
@@ -64,13 +99,9 @@ class WorkflowAction(LogBase):
         print("Workflow {} process {} records".format(self.configuration.workflow_record, len(workflow_items)))
         logger.info("{} processing {} records".format(self.configuration.workflow_record, len(workflow_items)))
 
-        # Get instances of Record from the table
-        # TODO - REMOVE
-        start = datetime.utcnow()
-        # TODO - REMOVE
-
+        ######################################################################
+        # FOr each id in the manifest, try and find the record in the storage table
         record_list:typing.List[Record] = []
-        
         for record_id_batch in self._batch(workflow_items, n_jobs):
             try:
                 record_list += Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._search_single_record)(record_id, table_util) for record_id in record_id_batch)
@@ -79,24 +110,20 @@ class WorkflowAction(LogBase):
                 logger.info("Generic Exception - Table Search")
                 logger.info(str(ex))
 
-        # TODO - REMOVE
-        end = datetime.utcnow()
-        logger.info("***TABLE RETRIEVE : {}".format((end-start).total_seconds()))
-        # TODO - REMOVE
-
+        ######################################################################
+        # With the list of records retrieved from the storage table, ensure we
+        # actually have some work to perform. If not just report it and return.
         print("Retrieved {} records from the table".format(len(record_list)))
         logger.info("Retrieved {} records from the table".format(len(record_list)))
-
         if len(record_list) == 0:
             logger.info("There are no files to process at this time.")
             return
 
-        # Tracking information
+        ######################################################################
+        # Prepare the services we'll need for processing
         current_batch = 0
         max_batch = math.ceil(len(record_list)/n_jobs)
 
-        # TODO: File and Storage Services
-        # Utilities for processing
         client_credentials = Credential(self.configuration)
         file_requests = FileRequests(self.configuration, client_credentials.get_application_token())
         storage_requests = StorageRequests(self.configuration, client_credentials.get_application_token())
@@ -106,12 +133,11 @@ class WorkflowAction(LogBase):
             self.configuration.record_account_share
         )
         
+
+        ######################################################################
+        # Batch process each record into OSDU 
         batch_results:typing.List[RecordUploadResult] = []
 
-        # Process batches
-        # TODO - REMOVE
-        start = datetime.utcnow()
-        # TODO - REMOVE
         for record_batch in self._batch(record_list, n_jobs):
             current_batch += 1
             batch_message = f"Uploading batch - {current_batch} of {max_batch}" 
@@ -124,17 +150,10 @@ class WorkflowAction(LogBase):
                 logger.info("Generic Exception - Processing")
                 logger.info(str(ex))
 
-        # TODO - REMOVE
-        end = datetime.utcnow()
-        logger.info("***RECORD PROCESSING : {}".format((end-start).total_seconds()))
-        # TODO - REMOVE
-
-
-        # TODO - REMOVE
-        start = datetime.utcnow()
-        # TODO - REMOVE
-
-        logger.info("Marking succesful records in storage table, check {} results".format(len(batch_results)))
+        ######################################################################
+        # Batch process each completed records that succeeded back to the 
+        # storage table for auditing purposes. 
+        logger.info("Update records in storage table with {} results".format(len(batch_results)))
         for execution_results in self._batch(batch_results, n_jobs):
             try:
                 Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._finalize_single_record)(execution_result, record_list, table_util) for execution_result in execution_results)
@@ -143,13 +162,10 @@ class WorkflowAction(LogBase):
                 logger.info(str(ex))
 
 
+        # Dump out some info on how many were succesfully processed
         good = [x for x in batch_results if x.succeeded]
-        print("Resulted in {} GOOD results".format(len(good)))
-
-        # TODO - REMOVE
-        end = datetime.utcnow()
-        logger.info("***RECORD UPDATING : {}".format((end-start).total_seconds()))
-        # TODO - REMOVE
+        print("{} records succesfully processed".format(len(good)))
+        logger.info("{} records succesfully processed".format(len(good)))
 
     def _finalize_single_record(
         self, 
@@ -157,24 +173,55 @@ class WorkflowAction(LogBase):
         record_list:typing.List[Record], 
         table_util:AzureTableStoreUtil
         ) -> None:
-    
+        """
+        Batch processor for records that have been through the flow. If a record is
+        tagged as haviing successfully processed, it is in OSDU and we can update the
+        storage table to reflect who did it, at what time, and the metadata id in OSDU
+        of the record that was pushed.
+
+        Parameters:
+
+        execution_result: 
+            The object used to track processing information.
+        record_list: 
+            Records representing records in the storage table that we started with
+        table_util: 
+            Utility to talk with the storage table. 
+
+        Returns 
+            None
+        """
         logger:Logger = self.get_logger()
         
-        if execution_result.succeeded:
-            find_record = [x for x in record_list if x.RowKey == execution_result.record_identity]
-            if len(find_record):
-                success_record = find_record[0]
-                success_record.container_id = self.configuration.log_identity
-                success_record.processed = True
-                success_record.meta_id = execution_result.file_id
-                success_record.processed_time = str(datetime.utcnow())
+        find_record = [x for x in record_list if x.RowKey == execution_result.record_identity]
+        if len(find_record):
+            orig_record = find_record[0]
+            orig_record.processed_time = str(datetime.utcnow())
+            if execution_result.succeeded:
+                orig_record.container_id = self.configuration.log_identity
+                orig_record.processed = True
+                orig_record.meta_id = execution_result.file_id
+            else:
+                orig_record.code = execution_result.status_code
+                logger.warn("Record {} failed to process".format(execution_result.record_identity))
 
-                table_util.update_record(self.configuration.record_storage_table, success_record)
-        else:
-            logger.warn("Record {} failed to process".format(execution_result.record_identity))
+            table_util.update_record(self.configuration.record_storage_table, orig_record)
 
 
     def _search_single_record(self, record_id:str, table_util:AzureTableStoreUtil) -> Record:
+        """
+        Batch processor for searching for a record in table storage.
+
+        Parameters:
+
+        record_id: 
+            Record id found in the workflow manifest
+        table_util: 
+            Utility to talk with the storage table. 
+
+        Returns 
+            Record if found, None otherwise
+        """
         return_item:Record = None
         records = table_util.search_table_id(self.configuration.record_storage_table, record_id)
         if records:
@@ -203,13 +250,24 @@ class WorkflowAction(LogBase):
         Transfer file is a BIG issue because we don't have rights to the SAS given by 
         OSDU so we might need to tweak random sleep times based on file size?
 
-        Timing for a single record shows the issue:
+        Parameters:
 
-            ***DOWNLOAD META : 0.628114
-            ***GET UPLOAD URL : 0.90549
-            *** TRANSFER FILE : 10.652775
-            *** UPLOAD METADATA : 2.250204
-            *** GET VERSION : 0.529724        
+        record: 
+            The table storage record we are to work on.
+        metadata_storage:
+            Storage where the metadata record can be found
+        file_requests:
+            Utility for talking OSDU file service
+        storage_requets:
+            Utiltity for talking OSDU storage service
+
+        Returns:
+            RecordUploadResult
+
+        Notes:
+        We do not have rights to the SAS token recieved for the OSDU upload location so 
+        we cannot query for properties on the copy operation. Given that, we are using a 
+        strategy where we assume we have ~2MBS throughput and "guess" at the wait time. 
         """
         
         logger:Logger = self.get_logger()
@@ -229,9 +287,6 @@ class WorkflowAction(LogBase):
         local_folder = "./"
         local_file = os.path.join(local_folder, file)
 
-        # TODO - REMOVE
-        start = datetime.utcnow()
-        # TODO - REMOVE
         metadata_storage.download_file(local_folder, folder, file )
         if os.path.exists(local_file):
             # We have issues if the metadata is not there.
@@ -245,24 +300,11 @@ class WorkflowAction(LogBase):
             if "||UPLOAD_URL||" not in raw_meta:
                 logger.error("Invalid Metadata recieved for : {}".format(record.metadata))
                 return return_result
-        # TODO - REMOVE
-        end = datetime.utcnow()
-        logger.info("***DOWNLOAD META : {}".format((end-start).total_seconds()))
-        # TODO - REMOVE
 
         ################################################################
         # Get upload URL and then force it in the metadata
-        # TODO - REMOVE
-        start = datetime.utcnow()
-        # TODO - REMOVE
         upload_response:FileUploadUrlResponse = file_requests.get_upload_url()
-        # TODO - REMOVE
-        end = datetime.utcnow()
-        logger.info("***GET UPLOAD URL : {}".format((end-start).total_seconds()))
-        # TODO - REMOVE
-
-        if upload_response.response.attempts > 1:
-            print("TODO Get UploadUrl attempts : {}".format(upload_response.response.attempts))
+        return_result.update_status(upload_response.response)
 
         if upload_response.url:
             return_result.file_source = upload_response.url.FileSource
@@ -271,83 +313,43 @@ class WorkflowAction(LogBase):
 
             ################################################################
             # Upload the file from customer storage to OSDU
-            # TODO - REMOVE
-            start = datetime.utcnow()
-            # TODO - REMOVE
-
-            # TODO Test
             file_size_mb = int(record.file_size) / (1024 * 1024)
             file_size_mb = int(math.floor(file_size_mb) / 2)
 
             if file_requests.transfer_file(file_size_mb, upload_response.url, record.source_sas):
-                logger.info("File succesfully uploaded")
-
-                # TODO - REMOVE
-                end = datetime.utcnow()
-                logger.info("*** TRANSFER FILE : {}".format((end-start).total_seconds()))
-                # TODO - REMOVE
-
                 ################################################################
                 # Upload the metadata to OSDU
-                # TODO - REMOVE
-                start = datetime.utcnow()
-                # TODO - REMOVE
                 upload_meta_response:FileUploadMetadataResponse = file_requests.upload_metadata(functional_meta)
-                # TODO  ? return_result.updateStatus(upload_meta_response.response)
-                if upload_meta_response.response.attempts > 1:
-                    print("TODO Upload metadata attempts : {}".format(upload_meta_response.response.attempts))
-                # TODO - REMOVE
-                end = datetime.utcnow()
-                logger.info("*** UPLOAD METADATA : {}".format((end-start).total_seconds()))
-                # TODO - REMOVE
-
+                return_result.update_status(upload_meta_response.response)
+                
                 return_result.file_id = upload_meta_response.id
 
                 if return_result.file_id:
                     ################################################################
                     # Get file version to verify it made it
-                    # TODO - REMOVE
-                    start = datetime.utcnow()
-                    # TODO - REMOVE
                     versions_response:StorageFileVersionResponse = storage_requests.get_file_versions(return_result.file_id)
-                    # TODO - REMOVE
-                    end = datetime.utcnow()
-                    logger.info("*** GET VERSION : {}".format((end-start).total_seconds()))
-                    # TODO - REMOVE
-
-                    # TODO ? return_result.updateStatus(versions_response.response)
-                    if versions_response.response.attempts > 1:
-                        print("TODO Get Version attempts : {}".format(versions_response.response.attempts))
+                    return_result.update_status(versions_response.response)
                 
                     if versions_response.versions:
                         return_result.file_version = versions_response.versions[0]
                         return_result.succeeded = True
                     else:
-                        print("TODO: GET VERSION FAILED")
                         logger.error(f"Failed to get file versions for {record.file_name}")
                 else:
-                        print("TODO: GET ID FAILED")
                         logger.error(f"Failed to get file ID on metadata for {record.file_name}")
         
             else:
-                print("TODO: UPLOAD FAILED")
                 logger.error("File {} failed to upload".format(record.file_name))
 
         else:
-            print("TODO: NO UPLOAD URL")
             logger.error("Failed to get upload url for {}".format(record.file_name))
-
-            # TODO - Complete the process to upload file then metadata and collect 
-            #        other information.
-            #return_result.status_codes = []
-            #return_result.file_version = None
-            #return_result.connection_errors = None
-            #return_result.file_id = None
 
         return return_result
 
     def _batch(self, items:list, batch_size:int) -> typing.List[str]:
-        """list is generic because it uses different types"""
+        """list is generic because it uses different types, batches up 
+        a list based on size of batch requested and returns a sub list
+        with that many items in it until it is exhausted"""
         idx = 0
         while idx < len(items):
             yield items[idx: idx + batch_size]

@@ -14,6 +14,13 @@ class RoundRobin(LogBase):
         self.configuration = configuration
 
     def create_workloads(self) -> typing.List[str]:
+        """
+        Generate workload manfiests in the storage account identified by record_xxx fields
+        by getting all of the unprocessed records from the storage table. 
+
+        TODO: Break this up to minimum 100 records per workload, but for now keep it simple
+        for testing until it's all working. 
+        """
 
         return_workloads = []
 
@@ -44,13 +51,18 @@ class RoundRobin(LogBase):
 
         # Create array
         workloads = []
-        for idx in range(int(self.configuration.container_count)):
+        container_count = int(self.configuration.container_count)
+        if container_count > len(records):
+            container_count = len(records)
+            logger.info("Downgrading container count due to low record counts - {}".format(container_count))
+
+        for idx in range(container_count):
             workloads.append([])
         
         # Round robin to different buckets
         count = 0
         for record in records:
-            insert = count % int(self.configuration.container_count)
+            insert = count % container_count
             count += 1
             workloads[insert].append(record.RowKey)
         

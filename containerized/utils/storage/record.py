@@ -9,6 +9,7 @@ class Record:
         self.PartitionKey = partition_key
         self.RowKey = str(uuid.uuid1())
         self.processed_time = ""
+        self.code = ""
         self.file_name = ""
         self.file_size=0
         self.source_sas = ""
