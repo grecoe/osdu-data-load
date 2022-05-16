@@ -52,8 +52,8 @@ def workload_container_execute():
 
     print("DEBUG - Executing Workload Container")
 
-    # Verify all required settings are in the environment, then create a configuration
-    # which will grab data from the environment AND the ini file that must be part of it
+    # Precursor: This code does NOT live in the actual container. However, the 
+    # container will FAIL if any of these settings OR the INI file are missing
     verify_required_environment ( 
         [
             "DATA_PLATFORM",
@@ -67,6 +67,8 @@ def workload_container_execute():
             "PLATFORM_SECRET"
         ]
     )
+    # END Precursor
+
     configuration = Config.get_workflow_configuration("./settings.ini")
 
     workflow = WorkflowAction(configuration)
@@ -82,8 +84,8 @@ def load_container_execute():
 
     print("DEBUG - Executing Load Container")
 
-    # Verify all required settings are in the environment, then create a configuration
-    # which will grab data from the environment AND the ini file that must be part of it
+    # Precursor: This code does NOT live in the actual container. However, the 
+    # container will FAIL if any of these settings OR the INI file are missing
     verify_required_environment ( 
         [
             "DATA_PLATFORM",
@@ -97,6 +99,13 @@ def load_container_execute():
             "DATA_SOURCE_MAP"
         ]
     )
+    # END Precursor
+
+
+    # Start Container Code
+    # NOTE: Running locally this code is doing a few rounds getting the workflow
+    #       records to within reach of the local code in the if len(workloads) else
+    #       code block. 
     configuration = Config.get_load_configuration("./settings.ini")
 
     # Create actions to perform
