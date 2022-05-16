@@ -107,10 +107,16 @@ class ScanAction(LogBase):
                     logger.info("Generic Exception")
                     logger.info(str(ex))
 
-            logger.info("Processed {} records for path {}".format(
-                process_results.count("1"),
-                path
+            processed = process_results.count("1")
+            duplicate = process_results.count("0") 
+            logger.info("Processed {} records for path {}".format(processed,path))
+
+            print("{} : {} registered, {} duplicate".format(
+                path,
+                processed,
+                duplicate
             ))
+
 
     def _process_file(
         self, 
@@ -140,18 +146,13 @@ class ScanAction(LogBase):
         """
         return_value = "0"
 
-        logger:Logger = self.get_logger()
-
         file_name = "{}/{}".format(path, source_file.file_name)
         file_name_base = source_file.file_name.split(".")[0]
 
         # If the file exists in the table, then this is likely a re-run and we should skip. 
         # Customer work around is to delete the records in the storage table. 
         exists = table_util.search_table_filename(self.configuration.record_storage_table, file_name)
-        if len(exists):
-            logger.info("Record for {} already exists in table, skipping".format(file_name))
-            print("Record for {} already exists in table, skipping".format(file_name))
-        else:
+        if len(exists) == 0:
             return_value = "1"
             # Create metadata file and upload it to the record share file share
             metadata = MetadataGenerator.generate_metadata(
@@ -174,7 +175,6 @@ class ScanAction(LogBase):
             r.metadata = "{}/{}".format(self.configuration.record_metadata_path, metadata_file)
         
             table_util.add_record(self.configuration.record_storage_table, r)        
-            print("Recorded file {}".format(source_file.file_name))
 
         return return_value
 

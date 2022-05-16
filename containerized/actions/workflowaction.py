@@ -315,6 +315,8 @@ class WorkflowAction(LogBase):
             # Upload the file from customer storage to OSDU
             file_size_mb = int(record.file_size) / (1024 * 1024)
             file_size_mb = int(math.floor(file_size_mb) / 2)
+            if file_size_mb == 0:
+                file_size_mb = 1
 
             if file_requests.transfer_file(file_size_mb, upload_response.url, record.source_sas):
                 ################################################################

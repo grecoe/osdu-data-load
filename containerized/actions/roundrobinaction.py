@@ -47,6 +47,7 @@ class RoundRobin(LogBase):
 
         if len(records) == 0:
             logger.warn("There are 0 records to process")
+            print("There are 0 unprocessed records in the table.")
             return return_workloads
 
         # Create array
