@@ -5,7 +5,7 @@ from azure.identity import ClientSecretCredential
 class Credential(LogBase):
     """
     Get the application token using the id and secret from the 
-    experience lab key vault. 
+    OSDU deployment key vault. 
     """
     def __init__(self, configuration:Config):
         super().__init__("Credentials", configuration.mounted_file_share_name, configuration.log_identity, True)

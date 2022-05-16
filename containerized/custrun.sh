@@ -21,7 +21,7 @@ DATA_SOURCE_ACCOUNT_SHARE=$(printenv DATA_SOURCE_ACCOUNT_SHARE)
 export DATA_SOURCE_ACCOUNT_KEY=$(az storage account keys list -g $DATA_SOURCE_RESOURCE_GROUP -n $DATA_SOURCE_ACCOUNT --subscription $DATA_SOURCE_SUBCRIPTION --query [0].value -otsv)
 DATA_SOURCE_ACCOUNT_KEY=$(printenv DATA_SOURCE_ACCOUNT_KEY)
 
-echo "Collecting Information from experience lab"
+echo "Collecting Information from OSDU Deployment"
 EXPERIENCE_LAB_SUBSCRIPTION=$(printenv EXPERIENCE_LAB_SUBSCRIPTION)
 EXPERIENCE_LAB_RESOURCE_GROUP=$(printenv EXPERIENCE_LAB_RESOURCE_GROUP)
 

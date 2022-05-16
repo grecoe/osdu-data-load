@@ -1,10 +1,6 @@
-# Bulk Data Loading
+# OSDU Bulk Data Loading
 
-Goto: (Datascan) C:\gitrepogrecoe\osdu-data-load\containerized>
-/mnt/c/gitrepogrecoe/osdu-data-load/containerized
-
-
-A process of loading and tracking a large number of files into the OSDU instance. 
+A generic process of loading and tracking a large number of files into the OSDU instance. 
 
 # Requirements
 
@@ -19,10 +15,20 @@ A process of loading and tracking a large number of files into the OSDU instance
 The customer fills out the details in the __custinput.sh__ file. It contains information about the file share that they have created for a data set as well as information about the OSDU instance they have deployed into their subscription. 
 
 # Execution
+To execute this test locally, open up __custinput.sh__ and change the values for all DATA_SOURCE_* fields to a sub/rg/storage acct/file share with the files to upload. Note the path of the files in the share and update DATA_SOURCE_MAP to files you want to ingest. 
 
-./custrun.sh custinput.sh
+Modify the other settings to your OSDU deployment Sub/RG. 
 
-# Flow
+Open up a bash shell to this directory and run the following:
+
+> az login
+> ./custrun.sh custinput.sh
+
+<b>Sub Sections</b>
+- [Work flow](#flow)
+- [Storage Table Records](#storage-table-record)
+
+## Flow
 
 <table>
     <tr> <td colspan=2> Customer Data Acquisition</td></tr>
@@ -87,6 +93,23 @@ The customer fills out the details in the __custinput.sh__ file. It contains inf
             <img width="100%" src="./docs/work_container.jpg"/>
         </td>
     </tr>
-
 </table>
 
+## Storage Table Record
+
+The following describes the storage table records 
+
+|Field|Description|
+|-----|-----|
+|PartitionKey|Partition in the table for this record.|
+|RowKey|A GUID generated so we can record/find specific records.|
+|Timestamp|The date/time the record was created.|
+|processed|A boolean flag indicating if this record has been processed succesfully. When true, any further searches to upload will ignore this record to avoid duplicates.|
+|processed_time|Date time the record was processed succesfully or not.|
+|code|The status code ONLY if the processing of the record failed.|
+|container_id|The ACI container ID (auto generated guid) to track which container processed the record.|
+|file_name|The path in the source file share where the file resides.|
+|file_size|Size of the file, in bytes, as it sits in the source file share. Needed because the OSDU SAS URL does not have enough rights to query properties, so this field is used to determine wait times when uploading to OSDU.|
+|metadata|The path to the generated metadata in the destination storage account used for logging, etc.|
+|source_sas|The SAS URI of the file in the source storage account, these SAS tokens are valid for 24 hours.|
+|meta_id|When succesfully processed, this is the OSDU identifier of the metadata record.|

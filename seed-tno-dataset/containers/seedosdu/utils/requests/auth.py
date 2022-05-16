@@ -5,7 +5,7 @@ from utils.logutil import LogBase, Logger
 class Credential(LogBase):
     """
     Get the application token using the id and secret from the 
-    experience lab key vault. 
+    OSDU deployment  key vault. 
     """
     def __init__(self, configuration:Config):
         super().__init__("Credentials", configuration.file_share_mount, configuration.log_identity)
