@@ -6,6 +6,7 @@ import json
 import math
 import multiprocessing
 import typing
+import time
 from utils.configuration.configutil import Config
 from utils.storage.storagetable import AzureTableStoreUtil
 from utils.storage.record import Record
@@ -109,6 +110,8 @@ class ScanAction(LogBase):
                 except Exception as ex:
                     logger.info("Generic Exception")
                     logger.info(str(ex))
+
+                time.sleep(2)
 
             processed = process_results.count("1")
             duplicate = process_results.count("0") 

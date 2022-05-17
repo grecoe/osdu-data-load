@@ -4,9 +4,10 @@
 import os
 import json
 import typing
+import time
 import math
 import multiprocessing
-from datetime import datetime, timedelta
+from datetime import datetime
 from utils.configuration.configutil import Config
 from utils.storage.storagetable import AzureTableStoreUtil
 from utils.storage.record import Record
@@ -113,6 +114,8 @@ class WorkflowAction(LogBase):
                 logger.info("Generic Exception - Table Search")
                 logger.info(str(ex))
 
+            time.sleep(5)
+
         ######################################################################
         # With the list of records retrieved from the storage table, ensure we
         # actually have some work to perform. If not just report it and return.
@@ -153,6 +156,8 @@ class WorkflowAction(LogBase):
                 logger.info("Generic Exception - Processing")
                 logger.info(str(ex))
 
+            time.sleep(5)
+
         ######################################################################
         # Batch process each completed records that succeeded back to the 
         # storage table for auditing purposes. 
@@ -164,6 +169,7 @@ class WorkflowAction(LogBase):
                 logger.info("Generic Exception - Record Update")
                 logger.info(str(ex))
 
+            time.sleep(5)
 
         # Dump out some info on how many were succesfully processed
         good = [x for x in batch_results if x.succeeded]
