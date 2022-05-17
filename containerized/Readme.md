@@ -1,4 +1,5 @@
 # OSDU Bulk Data Loading
+<sub>Dan Grecoe is a Microsoft Employee</sub>
 
 A generic process of loading and tracking a large number of files into the OSDU instance. 
 

@@ -1,6 +1,8 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import typing
-import json
 from utils.configuration.config import Config
 from utils.requests.auth import Credential
 from utils.uploader import FileUploader, UploadResults

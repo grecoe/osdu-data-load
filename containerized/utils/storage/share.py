@@ -1,6 +1,8 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import typing
 import os
-import json
 from datetime import datetime, timedelta
 from azure.storage.fileshare import (
     ShareServiceClient, 

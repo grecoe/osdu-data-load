@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import json
 import typing
@@ -140,7 +143,7 @@ class WorkflowAction(LogBase):
 
         for record_batch in self._batch(record_list, n_jobs):
             current_batch += 1
-            batch_message = f"Uploading batch - {current_batch} of {max_batch}" 
+            batch_message = f"Uploading file batch to OSDU - {current_batch} of {max_batch}" 
             print(batch_message)
             logger.info(batch_message)
 
@@ -201,6 +204,8 @@ class WorkflowAction(LogBase):
                 orig_record.container_id = self.configuration.log_identity
                 orig_record.processed = True
                 orig_record.meta_id = execution_result.file_id
+                # If this failed before, code might be set, make sure it's empty
+                orig_record.code = ""
             else:
                 orig_record.code = execution_result.status_code
                 logger.warn("Record {} failed to process".format(execution_result.record_identity))

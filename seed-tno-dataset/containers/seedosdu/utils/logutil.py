@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import json
 import logging

@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import time
 import requests
 
@@ -57,6 +60,9 @@ class RequestsRetryCommand:
 
     @staticmethod
     def is_success(retry_response:RetryRequestResponse) -> bool:
+        """
+        Determine if the recieved status code is in the acceptable range. 
+        """
         return retry_response.status_code in RequestsRetryCommand.ACCEPT_RANGE
 
     @staticmethod
@@ -163,88 +169,3 @@ class RequestsRetryCommand:
                 retry_response.error = "Retry maximum hit at {}".format(retry_response.attempts)
 
         return retry_response
-
-
-"""
-Validation of the code above. You will need an environment with azure.identity to collect a token
-or remove that code and just provide your own token. 
-
-Further, you will need to collect our lab name and provide that below. 
-
-Tests performed:
-    Function is NOT from requests library
-    Token is bad with a 401 return
-    All is good and you get legal tags
-    URL is bad and causes a connection error single try
-    URL is bad and causes a connection error with retry
-"""
-
-"""
-import json
-import requests
-from azure.identity import ClientSecretCredential
-
-LAB_NAME = "platform9529"
-CLIENT = "15dcc0b0-6cae-4807-9b02-a79b2a461dc1"
-TENANT = "72f988bf-86f1-41af-91ab-2d7cd011db47"
-SECRET = "7H_w~jHmQExbLCNr6Df~VhaAyI17l6a0fD"
-
-
-# For actual request, this is my setup so...probably don't share :)
-url = "https://{}.energy.azure.com/api/legal/v1/legaltags".format(LAB_NAME)
-invalid_url = "https://{}.energy.azure.com/api/legal/v1".format(LAB_NAME)
-
-app_scope = CLIENT + "/.default openid profile offline_access"
-creds = ClientSecretCredential(
-            tenant_id=TENANT, 
-            client_id=CLIENT, 
-            client_secret=SECRET
-        )
-token = creds.get_token(app_scope)
-
-invalid_headers = {
-    "Authorization" : "Bearer {}".format("INVALID_TOKEN"),
-    "Accept" : "application/json",
-    "data-partition-id" : "{}-opendes".format(LAB_NAME)
-}
-valid_headers = {
-    "Authorization" : "Bearer {}".format(token.token),
-    "Accept" : "application/json",
-    "data-partition-id" : "{}-opendes".format(LAB_NAME)
-}
-
-def not_in_requests(url, headers=None, data=None, json=None):
-    print("You'll never get here")
-
-# Perform tests
-
-print("INVALID FUNCTION:")
-try:
-    data = RequestsRetryCommand.make_request(not_in_requests, url)
-except Exception as ex:
-    print("Expected requests violation")
-    print(str(ex))
-
-print("\nEXPECTED 401 FAILURE:")
-data = RequestsRetryCommand.make_request(requests.get, url, headers=invalid_headers)
-print("Succeeded:", RequestsRetryCommand.is_success(data))
-print(data)
-
-print("\nEXPECTED SUCCESS:")
-data = RequestsRetryCommand.make_request(requests.get, url, headers=valid_headers)
-print("Legal information:")
-print("Succeeded:", RequestsRetryCommand.is_success(data))
-print(data)
-print(json.dumps(data.result, indent=4))
-
-print("\nEXPECTED CONNECTION ERROR:")
-data = RequestsRetryCommand.make_request(requests.get, invalid_url, headers=valid_headers)
-print("Succeeded:", RequestsRetryCommand.is_success(data))
-print(data)
-
-print("\ALLOW CONNECTION ERROR RETRY:")
-RequestsRetryCommand.ALLOW_CONNECTION_ERROR_RETRY = True
-data = RequestsRetryCommand.make_request(requests.get, invalid_url, headers=valid_headers)
-print("Succeeded:", RequestsRetryCommand.is_success(data))
-print(data)
-"""

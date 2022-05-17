@@ -1,4 +1,6 @@
-from distutils.command.upload import upload
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import requests
 import time
@@ -8,6 +10,10 @@ from utils.requests.retryrequest import RequestsRetryCommand, RetryRequestRespon
 from azure.storage.blob import BlobClient
 
 class UploadUrl:
+    """
+    Encapsulates the return of the Upload URL recieved
+    from an OSDU instance
+    """
     def __init__(self, upload_response:dict):
         self.SignedURL = None
         self.FileSource = None
@@ -16,22 +22,36 @@ class UploadUrl:
             setattr(self, key, upload_response[key])
 
 class FileUploadUrlResponse:
+    """
+    Encapsulates the response from retrieving an upload url from an OSDU
+    instances along with the request statistics. 
+    """
     def __init__(self, url:UploadUrl, response:RetryRequestResponse):
         self.url:UploadUrl = url
         self.response:RetryRequestResponse = response
 
 class FileUploadMetadataResponse:
+    """
+    Encapsulates the response from uploading metadata to an OSDU
+    instances along with the request statistics. 
+    """
     def __init__(self, id:str, response:RetryRequestResponse):
         self.id:str = id
         self.response:RetryRequestResponse = response
 
 class FileRequests(LogBase):
+    """
+    Encapsulate calls to the OSDU File Service
+    """
     def __init__(self, configuration:Config, access_token:str):
         super().__init__("FileRequests", configuration.mounted_file_share_name, configuration.log_identity, True)
         self.configuration:Config = configuration
         self.token:str = access_token
 
     def get_upload_url(self) -> FileUploadUrlResponse:
+        """
+        Retrieve an upload URL from OSDU
+        """
 
         logger:Logger = self.get_logger()
 
@@ -45,7 +65,7 @@ class FileRequests(LogBase):
         )
 
         if response.attempts > 1:
-            message = f"get_upload_url - {response.action} on {response.url} attempts : {response.attempts}"
+            message = f"get_upload_url - {response.action} on {response.url} attempts : {response.attempts} codes : {response.status_codes}"
             print(message)
             logger.info(message)
 
@@ -60,16 +80,29 @@ class FileRequests(LogBase):
 
     def transfer_file(self, file_size_mb:int, url:UploadUrl, sas_url:str) -> bool:
         """
-        url: retrieved from getUploadUrl
-        sas_url: the blob to move
+        Transfer a file from one Azure Storage Account location (url.SignedUrl - OSDU) to 
+        another location (sas_url)
+
+        The SAS Url from OSDU does not allow us to query the blob properties, so we have to 
+        make an assumption that we can transfer an MB in 1 second. In reality, the caller is
+        assuming 2MBS. Best shot, but probably should review. 
+
+        Parameters:
+        file_size_mb:
+            Size of the file to transfer in MB, used to determine sleep 
+        url: 
+            retrieved from getUploadUrl
+        sas_url: 
+            the blob to move
+
+        Returns:
+            True
         """
-        logger:Logger = self.get_logger()
 
-        upload_success = False
-
+        # Get blob client on target
         target_blob = BlobClient.from_blob_url(url.SignedURL)
 
-        # Copy started
+        # Copy source to target
         target_blob.start_copy_from_url(sas_url)
 
         # TODO Just try and sleep, we have no right on the blob to get it's properties
@@ -78,30 +111,21 @@ class FileRequests(LogBase):
         sleep_time = file_size_mb * 1
         time.sleep(sleep_time)
 
-        upload_success = True
-        """
-        for i in range(10):
-            # This line throws an auth exception
-            props = target_blob.get_blob_properties()
-            status = props.copy.status
-            print("Copy status: " + status)
-            if status == "success":
-                # Copy finished
-                logger.info("File trasnfer succesful")
-                upload_success = True
-                break
-            time.sleep(10)
-
-        if upload_success == False:
-            # if not finished after 100s, cancel the operation
-            props = target_blob.get_blob_properties()
-            logger.warn("File trasnfer succesful failed : {}".format(props.copy.status))
-            copy_id = props.copy.id
-            target_blob.abort_copy(copy_id)
-        """        
-        return upload_success
+        return True
 
     def upload_file(self, url:UploadUrl, file_path:str) -> bool:
+        """
+        Upload a local file with a signed OSDU URL from a local file. 
+
+        Parameters:
+        url: 
+            retrieved from getUploadUrl
+        file_path: 
+            Local file path
+
+        Returns:
+            True if succesful, False otherwise.
+        """
         logger:Logger = self.get_logger()
 
         upload_success = False
@@ -121,7 +145,13 @@ class FileRequests(LogBase):
         return upload_success
         
     def upload_metadata(self, metadata:dict) -> FileUploadMetadataResponse:
+        """
+        Upload a metadata file to OSDU
 
+        Parameters:
+        metadata:
+            Dictionary containing the metadata associated with an uploaded file. 
+        """
         logger:Logger = self.get_logger()
 
         url = self.configuration.file_url + "/files/metadata"
@@ -135,7 +165,7 @@ class FileRequests(LogBase):
         )
 
         if response.attempts > 1:
-            message = f"upload_metadata - {response.action} on {response.url} attempts : {response.attempts}"
+            message = f"upload_metadata - {response.action} on {response.url} attempts : {response.attempts} codes : {response.status_codes}"
             print(message)
             logger.info(message)
 

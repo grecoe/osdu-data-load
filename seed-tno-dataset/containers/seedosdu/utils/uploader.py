@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import multiprocessing
 import typing
 import math

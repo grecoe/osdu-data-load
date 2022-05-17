@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 from utils.configuration.config import Config
 from azure.identity import ClientSecretCredential
 from utils.logutil import LogBase, Logger

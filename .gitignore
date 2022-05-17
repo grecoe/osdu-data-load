@@ -4,3 +4,5 @@ __pycache__
 build
 dist
 OSDU_Data_Upload.docx
+output/
+outputwork/

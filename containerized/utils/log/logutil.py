@@ -1,76 +1,74 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
-import json
 import logging
 import typing
 from logging import Logger
 from datetime import datetime
 
 class LogBase:
+    """
+    Base class to derive from for classes that wish to have logging capabilities to
+    a mounted file share.
+    """
     def __init__(self, log_name:str, file_share:str, identity:str = None, is_workflow:bool = False):
+        """
+        Constructor
+
+        log_name:
+            Name to put in the log, typically related to the class deriving
+        file_share:
+            Path of the file share to put files into. Use "./" for local storage.
+        identity:
+            If provided, is appended to the end of the log name. Used with GUID's to 
+            uniquely identify processes. 
+        is_workflow:
+            Flag used to determine file name (load_ or workload_)
+        """
         self.file_share = file_share
         self.log_name = log_name
         self.identity = identity
         self.is_workflow = is_workflow
 
     def get_logger(self) -> Logger:
+        """
+        Gets a logger instance for any class function that derives from this class.
+        """
         return LoggingUtils.get_logger(self.file_share, self.log_name, self.identity, self.is_workflow)
-
-class ActivityLog:
-    ACTIVITY_BASE = "output"
-
-    def __init__(self, file_share:str, activity_name:str, identity:str = None):
-        # Set up base logger
-
-        self.file_share = file_share
-        self.activity_name = activity_name
-
-        if not self.file_share:
-            self.file_share = os.getcwd()
-
-        if identity is not None:
-            self.activity_file = "{}-{}.log".format(self.activity_name,identity)
-        else:
-            timestamp = datetime.now().strftime('%m%d%y')
-            self.activity_file = "{}-{}.log".format(self.activity_name,timestamp)
-
-        self.log_path = os.path.join(self.file_share, ActivityLog.ACTIVITY_BASE)
-        self.activity_log_path = os.path.join(self.log_path, self.activity_file)
-
-        self._buffer:typing.List[str] = []
-
-    def add_activity(self, *args):
-        now = datetime.utcnow()
-        stamp = now.strftime("%m-%d-%Y, %H:%M:%S,%f : ")
-        for arg in args:
-            content = arg
-            if isinstance(arg, dict) or isinstance(arg, list):
-                content = json.dumps(arg, indent=4)
-
-            self._buffer.append("{} {}".format(stamp, content))
-    
-    def dump(self):
-        if not os.path.exists(self.log_path):
-            os.makedirs(self.log_path)
-        
-        with open(self.activity_log_path, "w") as log:
-            for activity in self._buffer:
-                log.writelines("{}\n".format(activity))
 
 
 class LoggingUtils:
+    """
+    Generic logging util.
+    """
+
     LOG_UTILS:typing.Dict[str, Logger] = {}
     ACTIVE_LOG_FILE = None
     LOG_BASE = "output"
 
     @staticmethod
     def get_logger(file_share:str, log_name:str, identity:str = None,  is_workflow:bool = False) -> Logger:
+        """
+        Constructor
+
+        log_name:
+            Name to put in the log, typically related to the class deriving
+        file_share:
+            Path of the file share to put files into. Use "./" for local storage.
+        identity:
+            If provided, is appended to the end of the log name. Used with GUID's to 
+            uniquely identify processes. 
+        is_workflow:
+            Flag used to determine file name (load_ or workload_)
+        """
 
         if log_name in LoggingUtils.LOG_UTILS:
             return LoggingUtils.LOG_UTILS[log_name]
 
         log_base_start = "stgscan"
         if is_workflow:
-            log_base_start = "workflow"
+            log_base_start = "workload"
 
         # Set up base logger
         timestamp = datetime.now().strftime('%m%d%y')

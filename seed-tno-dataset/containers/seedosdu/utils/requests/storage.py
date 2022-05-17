@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import requests
 import typing
 from utils.logutil import LogBase, Logger

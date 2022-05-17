@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import configparser
 import uuid
@@ -5,6 +8,10 @@ import typing
 from datetime import datetime
 
 class Config:
+    """
+    Configuration object to be used across workloads. Retrieves required settings from
+    the environment and an ini file, typically would be the settings.ini in the location. 
+    """
 
     def __init__(self, ini_file:str):
         
@@ -91,6 +98,18 @@ class Config:
 
     @staticmethod
     def get_load_configuration( ini_file:str) -> object:
+        """
+        get_load_configuration : Get settings specific to 
+        scanning an Azure Storage File Share
+
+        Parameters:
+
+        ini_file:
+            Settings file
+
+        Returns:
+            Instance of Config
+        """
         return_config = Config(ini_file)
 
         # Customer Environment - Required only for load as load will generate 
@@ -115,6 +134,18 @@ class Config:
     
     @staticmethod
     def get_workflow_configuration(ini_file:str) -> object:
+        """
+        get_workflow_configuration : Get settings specific to 
+        uploading files to OSDU
+
+        Parameters:
+
+        ini_file:
+            Settings file
+
+        Returns:
+            Instance of Config
+        """
         return_config = Config(ini_file)
 
         # Workflow record is ONLY used in the workflow schema  
@@ -129,6 +160,19 @@ class Config:
         return return_config
 
     def _get_environment(self, setting:str, required:bool = True) -> str:
+        """
+        _get_environment : Get a setting from os.environ
+
+        Parameters:
+
+        setting:
+            Name of setting to retrieve
+        required:
+            If true and value is not present, throws exception.
+
+        Returns:
+            dict representing  request headers.
+        """
         return_value = None
 
         if setting not in os.environ:
@@ -140,15 +184,22 @@ class Config:
         return return_value
 
     def get_headers(self, access_token:str, post:bool = False) -> dict:
-        correlation_id = 'workflow-create-%s' % datetime.now().strftime('%m%d-%H%M%S')
-
         """
-        Get request headers.
+        get_headers : For all OSDU transactions
 
-        :param RawConfigParser config: config that is used in calling module
-        :return: dictionary with headers required for requests
-        :rtype: dict
+        Parameters:
+
+        access_token:
+            Token to be used as authentication
+        post:
+            Flag to determine whether to add content type or not
+
+        Returns:
+        dict representing  request headers.
         """
+
+        correlation_id = 'workflow-%s' % datetime.now().strftime('%m%d-%H%M%S')
+
         headers = {
             "Accept" : "application/json",
             "data-partition-id": self.data_partition,

@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 from utils.configuration.config import Config
 from utils.requests.file import UploadUrl

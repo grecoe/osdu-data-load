@@ -1,6 +1,12 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 
 class MetadataGenerator:
+    """
+    Generic OSDU metadata generator. 
+    """
 
     @staticmethod
     def generate_metadata(aclViewer:str, aclOwner:str, legalTag:str, fileName:str) -> dict:

@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 from utils.configuration.configutil import Config
 from utils.log.logutil import LogBase, Logger
 from azure.identity import ClientSecretCredential
@@ -13,6 +16,12 @@ class Credential(LogBase):
         self.token = None
 
     def get_application_token(self) -> str:
+        """
+        Retrieves an authentication token for the given client/secret pair
+        saved in the class parameters. 
+
+        Retrieves it only once, future calls get the same token. 
+        """
 
         logger:Logger = self.get_logger()
 

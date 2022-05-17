@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import typing
 import datetime
 from utils.storage.record import Record
@@ -6,6 +9,10 @@ from azure.data.tables._entity import EntityProperty
 from azure.data.tables._deserialize import TablesEntityDatetime
 
 class AzureTableStoreUtil:
+    """
+    Class encapsulating the calls to an Azure Storage Table 
+    """
+
     CONN_STR = "DefaultEndpointsProtocol=https;AccountName={};AccountKey={};EndpointSuffix=core.windows.net"
 
     def __init__(self, account_name:str, account_key:str):
@@ -16,19 +23,13 @@ class AzureTableStoreUtil:
 
     def search_unprocessed(self, table_name:str) -> typing.List[Record]:
         """
-        Search the storage table for records in a time window.
-
-        If end is not provided, get all records before start, otherwise
-        all records between start and end.
-
+        Search the table for all records that are not processed yet. This will help
+        if we ever need to re-run a container to retry failed records. 
         Params:
         table_name - required: Yes  Storage Table to search
-        start -      required: Yes  When end is none = all records before this time
-                                    When end is not none = start of window
-        end -        required: No   Identifies end of window scan
 
         Returns:
-        List of dictionaries, each represents a record found
+        List of Record objects for each record that has not been processed
         """
         return_records = []
         with self._create_table(table_name) as log_table:
@@ -41,21 +42,16 @@ class AzureTableStoreUtil:
 
         return return_records
 
-    def search_table_id(self, table_name:str, recordid:str) -> typing.List[typing.Dict[str, typing.Any]]:
+    def search_table_id(self, table_name:str, recordid:str) -> typing.List[Record]:
         """
-        Search the storage table for records in a time window.
-
-        If end is not provided, get all records before start, otherwise
-        all records between start and end.
+        Search the table for a specific record (RowKey). 
 
         Params:
         table_name - required: Yes  Storage Table to search
-        start -      required: Yes  When end is none = all records before this time
-                                    When end is not none = start of window
-        end -        required: No   Identifies end of window scan
+        recordid   - required: Yes  RowKey of the record to find. 
 
         Returns:
-        List of dictionaries, each represents a record found
+        List of Record objects for each record that has not been processed
         """
         return_records = []
         with self._get_table_client(table_name) as table_client:
@@ -66,21 +62,17 @@ class AzureTableStoreUtil:
 
         return return_records
 
-    def search_table_filename(self, table_name:str, file_name:str) -> typing.List[typing.Dict[str, typing.Any]]:
+    def search_table_filename(self, table_name:str, file_name:str) -> typing.List[Record]:
         """
-        Search the storage table for records in a time window.
-
-        If end is not provided, get all records before start, otherwise
-        all records between start and end.
+        Search the table for a specific record by file name, this is the whole
+        path of where the file sat in the source file share
 
         Params:
         table_name - required: Yes  Storage Table to search
-        start -      required: Yes  When end is none = all records before this time
-                                    When end is not none = start of window
-        end -        required: No   Identifies end of window scan
+        file_name  - required: Yes  File path to search for. 
 
         Returns:
-        List of dictionaries, each represents a record found
+        List of Record objects for each record that has not been processed
         """
         return_records = []
         with self._get_table_client(table_name) as table_client:
@@ -91,36 +83,32 @@ class AzureTableStoreUtil:
 
         return return_records
 
-    def search_table(self, table_name:str, start: datetime, end: datetime = None) -> typing.List[typing.Dict[str, typing.Any]]:
-        """
-        Search the storage table for records in a time window.
 
-        If end is not provided, get all records before start, otherwise
-        all records between start and end.
+    def update_record(self, table_name:str, entity:Record) -> None:
+        """
+        Update a record in the storage table. Creates the table if not already
+        present.
 
         Params:
         table_name - required: Yes  Storage Table to search
-        start -      required: Yes  When end is none = all records before this time
-                                    When end is not none = start of window
-        end -        required: No   Identifies end of window scan
+        entity     - required: Yes  Record to update 
 
         Returns:
-        List of dictionaries, each represents a record found
         """
-        return_records = []
-        with self._get_table_client(table_name) as table_client:
-            query_filter = AzureTableStoreUtil._get_query_filter(start, end)
-            raw_records = self._parse_query_results(table_client, query_filter)
-            for raw in raw_records:
-                return_records.append(Record.from_entity(table_name, raw))
-    
-        return return_records
-
-    def update_record(self, table_name:str, entity:Record) -> None:
         with self._get_table_client(table_name) as table_client:
             table_client.upsert_entity(mode=UpdateMode.REPLACE, entity=entity.get_entity())
 
     def delete_record(self, table_name:str, row_key:str, partition:str) -> None:
+        """
+        Delete a record from the storage table. 
+
+        Params:
+        table_name - required: Yes  Storage Table to search
+        row_key    - required: Yes  RowKey of the record to delete
+        partition  - required: Yes  Partition ID to use
+
+        Returns:
+        """
         self.delete_records(table_name, [(row_key, partition)])
 
     def delete_records(self, table_name:str, records:typing.List[typing.Tuple[str,str]]) -> None:
@@ -155,13 +143,18 @@ class AzureTableStoreUtil:
                 print(str(ex))
 
     @staticmethod
-    def _get_query_filter_unprocessed():
+    def _get_query_filter_unprocessed() -> str:
+        """
+        Build the query string to get all unprocessed records
+        """
         query_filter = "processed eq false"
         return query_filter
 
     @staticmethod
-    def _get_query_filter_name(file_name:str):
-
+    def _get_query_filter_name(file_name:str) -> str:
+        """
+        Build the query string to get a record by filename
+        """
         query_filter = "file_name eq '{}'".format(
             file_name,
         )
@@ -169,37 +162,29 @@ class AzureTableStoreUtil:
         return query_filter
 
     @staticmethod
-    def _get_query_filter_id(rowkey:str):
-
+    def _get_query_filter_id(rowkey:str) -> str:
+        """
+        Build the query string to get a record by it's row key
+        """
         query_filter = "RowKey eq '{}'".format(
             rowkey,
         )
 
         return query_filter
 
-    @staticmethod
-    def _get_query_filter(start: datetime, end: datetime) -> str:
-        """If no end date we are looking for anything BEFORE start, 
-        otherwise get records between times
-        
-        NOTE: This was done with an IOT Hub in mind so the time field
-        EventProcessedUtcTime comes from the IOT Hub, this will need
-        to change to whatever time field you add to your table. 
-        """
-        query_filter = None
-        if end is not None:
-            query_filter = "EventProcessedUtcTime ge datetime'{}' and EventProcessedUtcTime lt datetime'{}'".format(
-                start.isoformat(),
-                end.isoformat()
-            )
-        else:
-            query_filter = "EventProcessedUtcTime lt datetime'{}'".format(
-                start.isoformat()
-            )
-
-        return query_filter
 
     def _parse_query_results(self, table_client:TableClient, query:str) -> typing.List[dict]:
+        """
+        Query the storage table with a given query and return the results as a list of 
+        dictionaries. 
+
+        Parameters:
+
+        table_client:
+            Client to perform the query on
+        query:
+            String query to execute
+        """
         return_records = []
 
         results = table_client.query_entities(query)
@@ -243,8 +228,10 @@ class AzureTableStoreUtil:
         return return_client
 
     def _get_table_client(self, table_name: str) ->TableClient:
-        """Searches for and returns a table client for the specified
-        table in this account. If not found throws an exception."""
+        """
+        Searches for and returns a table client for the specified
+        table in this account. If not found throws an exception.
+        """
         return_client = None
 
         with TableServiceClient.from_connection_string(conn_str=self.connection_string) as table_service:

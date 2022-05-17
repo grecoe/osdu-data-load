@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 from utils.configuration.configutil import Config
 from actions.scanaction import ScanAction
 from actions.roundrobinaction import RoundRobin

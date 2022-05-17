@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import json
 import math
@@ -109,13 +112,15 @@ class ScanAction(LogBase):
 
             processed = process_results.count("1")
             duplicate = process_results.count("0") 
-            logger.info("Processed {} records for path {}".format(processed,path))
 
-            print("{} : {} registered, {} duplicate".format(
+            message = "{} : {} registered, {} duplicate".format(
                 path,
                 processed,
                 duplicate
-            ))
+            )
+
+            logger.info(message)
+            print(message)
 
 
     def _process_file(
@@ -161,6 +166,7 @@ class ScanAction(LogBase):
                 self.configuration.legal_tag, 
                 file_name)
 
+            # TODO : Change the name base here to a UUID so there is no name conflicts.
             metadata_file = "{}.json".format(file_name_base) 
             with open(metadata_file, "w") as meta_output:
                         meta_output.writelines(json.dumps(metadata, indent=4))

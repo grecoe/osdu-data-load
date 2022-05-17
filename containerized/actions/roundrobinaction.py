@@ -1,6 +1,8 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import os
 import json
-from textwrap import indent
 import typing
 from utils.configuration.configutil import Config
 from utils.storage.storagetable import AzureTableStoreUtil
@@ -18,7 +20,7 @@ class RoundRobin(LogBase):
         Generate workload manfiests in the storage account identified by record_xxx fields
         by getting all of the unprocessed records from the storage table. 
 
-        TODO: Break this up to minimum 100 records per workload, but for now keep it simple
+        TODO: Break this up to minimum 1000 records per workload, but for now keep it simple
         for testing until it's all working. 
         """
 
@@ -50,12 +52,19 @@ class RoundRobin(LogBase):
             print("There are 0 unprocessed records in the table.")
             return return_workloads
 
-        # Create array
+        # Create array, but we will limit the number of needed containers/workflow records
+        # to at max self.configuration.container_count, but each container should take on at 
+        # least 1000 records. 
         workloads = []
         container_count = int(self.configuration.container_count)
-        if container_count > len(records):
-            container_count = len(records)
-            logger.info("Downgrading container count due to low record counts - {}".format(container_count))
+        record_count = len(records)
+        containers_needed = int(record_count/1000)
+
+        if container_count > containers_needed:
+            container_count = containers_needed
+            if container_count == 0 and record_count > 0:
+                container_count = 1
+            logger.info("Container Distribution Downgraded for {} records: {}".format(record_count, container_count))
 
         for idx in range(container_count):
             workloads.append([])

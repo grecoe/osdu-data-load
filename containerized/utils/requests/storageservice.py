@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import requests
 import typing
 from utils.log.logutil import LogBase, Logger
@@ -6,11 +9,18 @@ from utils.requests.retryrequest import RequestsRetryCommand, RetryRequestRespon
 
 
 class StorageFileVersionResponse:
+    """
+    Encapsulates the response from requesting a file version from an OSDU
+    instances along with the request statistics. 
+    """
     def __init__(self, versions:typing.List[str], response:RetryRequestResponse):
         self.versions:typing.List[str] = versions
         self.response:RetryRequestResponse = response
 
 class StorageRequests(LogBase):
+    """
+    Encapsulates communication to an OSDU Storage Service
+    """
 
     def __init__(self, configuration:Config, access_token:str):
         super().__init__("StorageRequests", configuration.mounted_file_share_name, configuration.log_identity, True)
@@ -18,6 +28,9 @@ class StorageRequests(LogBase):
         self.token = access_token
 
     def get_file_versions(self, file_identifier:str) -> StorageFileVersionResponse:
+        """
+        Retrieve the file version of a file in OSDU using the file identifier
+        """
 
         logger:Logger = self.get_logger()
 
@@ -35,7 +48,7 @@ class StorageRequests(LogBase):
         )
 
         if response.attempts > 1:
-            message = f"get_file_versions - {response.action} on {file_identifier} attempts : {response.attempts}"
+            message = f"get_file_versions - {response.action} on {file_identifier} attempts : {response.attempts} codes : {response.status_codes}"
             print(message)
             logger.info(message)
 

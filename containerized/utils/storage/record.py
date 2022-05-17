@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 import uuid
 
 class Record:
@@ -8,20 +11,30 @@ class Record:
         self.table_name = None
         self.PartitionKey = partition_key
         self.RowKey = str(uuid.uuid1())
+        # Timestamp when the file was processed
         self.processed_time = ""
+        # Status code if the processing failed
         self.code = ""
+        # Name of the file (path) in file share
         self.file_name = ""
+        # Size in bytes of the source file
         self.file_size=0
+        # SAS URL to the file in the file share
         self.source_sas = ""
+        # Path in the file share to the metadata associated with this file
         self.metadata = ""
+        # Container ID that processed the record
         self.container_id = ""
+        # The record ID in OSDU
         self.meta_id = ""
+        # Indicates if the file has been processed or not.
         self.processed = False
 
     def get_entity(self):
         """
         Entity is everyting in self.__dict__ EXCEPT the 
-        table name.
+        table name. This is used to pass to the storage API for creating
+        or updating a table record. 
         """
         entity = {}
         for prop in self.__dict__:
@@ -32,6 +45,10 @@ class Record:
 
     @staticmethod
     def from_entity(table:str, obj:dict) -> object:
+        """
+        Create an instance of Record from a dictionary of data retrieved
+        from the table storage API
+        """
 
         record = obj
         if isinstance(record,list):
