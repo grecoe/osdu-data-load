@@ -60,9 +60,9 @@ class RecordUploadResult:
                     self.connection_errors[val] = 0
                 self.connection_errors[val] += 1
 
-class WorkflowAction(LogBase):
+class WorkloadAction(LogBase):
     def __init__(self, configuration:Config):
-        super().__init__("Workflow", configuration.mounted_file_share_name, configuration.log_identity, True)
+        super().__init__("Workload", configuration.mounted_file_share_name, configuration.log_identity, True)
         self.configuration = configuration
 
     def process_records(self):
@@ -106,7 +106,15 @@ class WorkflowAction(LogBase):
         ######################################################################
         # FOr each id in the manifest, try and find the record in the storage table
         record_list:typing.List[Record] = []
+        current_batch = 0
+        max_batch = math.ceil(len(workflow_items)/n_jobs)
+
         for record_id_batch in self._batch(workflow_items, n_jobs):
+            current_batch += 1
+            batch_message = f"1 of 3: Check duplicates batch - {current_batch} of {max_batch}" 
+            print(batch_message)
+            logger.info(batch_message)
+
             try:
                 record_list += Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._search_single_record)(record_id, table_util) for record_id in record_id_batch)
                 record_list = [x for x in record_list if x is not None]
@@ -114,7 +122,11 @@ class WorkflowAction(LogBase):
                 logger.info("Generic Exception - Table Search")
                 logger.info(str(ex))
 
-            time.sleep(5)
+            # Sleep time of 5 seconds fairly irrelevant since we are going to process a lot. Let
+            # Parallel clean up a bit...but we MAY want to put this whole loop into a thread and then
+            # we can watch the thread. If it times out (some large amount of time) we can kill the 
+            # thread, potentially restart or at least get container to stop with a logged error. 
+            time.sleep(2)
 
         ######################################################################
         # With the list of records retrieved from the storage table, ensure we
@@ -127,9 +139,6 @@ class WorkflowAction(LogBase):
 
         ######################################################################
         # Prepare the services we'll need for processing
-        current_batch = 0
-        max_batch = math.ceil(len(record_list)/n_jobs)
-
         client_credentials = Credential(self.configuration)
         file_requests = FileRequests(self.configuration, client_credentials.get_application_token())
         storage_requests = StorageRequests(self.configuration, client_credentials.get_application_token())
@@ -144,32 +153,50 @@ class WorkflowAction(LogBase):
         # Batch process each record into OSDU 
         batch_results:typing.List[RecordUploadResult] = []
 
+        current_batch = 0
+        max_batch = math.ceil(len(record_list)/n_jobs)
         for record_batch in self._batch(record_list, n_jobs):
             current_batch += 1
-            batch_message = f"Uploading file batch to OSDU - {current_batch} of {max_batch}" 
+            batch_message = f"2 of 3: Uploading to OSDU batch - {current_batch} of {max_batch}" 
             print(batch_message)
             logger.info(batch_message)
 
             try:
                 batch_results += Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._process_single_record)(record, metadata_storage, file_requests, storage_requests) for record in record_batch)
             except Exception as ex:
-                logger.info("Generic Exception - Processing")
+                logger.info("Generic Exception - Processing single record")
                 logger.info(str(ex))
 
-            time.sleep(5)
+            # Sleep time of 5 seconds fairly irrelevant since we are going to process a lot. Let
+            # Parallel clean up a bit...but we MAY want to put this whole loop into a thread and then
+            # we can watch the thread. If it times out (some large amount of time) we can kill the 
+            # thread, potentially restart or at least get container to stop with a logged error. 
+            time.sleep(2)
 
         ######################################################################
         # Batch process each completed records that succeeded back to the 
         # storage table for auditing purposes. 
         logger.info("Update records in storage table with {} results".format(len(batch_results)))
+        current_batch = 0
+        max_batch = math.ceil(len(batch_results)/n_jobs)
+       
         for execution_results in self._batch(batch_results, n_jobs):
+            current_batch += 1
+            batch_message = f"3 of 3: Processing results batch - {current_batch} of {max_batch}" 
+            print(batch_message)
+            logger.info(batch_message)
+
             try:
                 Parallel(n_jobs=n_jobs, timeout=600.0)(delayed(self._finalize_single_record)(execution_result, record_list, table_util) for execution_result in execution_results)
             except Exception as ex:
                 logger.info("Generic Exception - Record Update")
                 logger.info(str(ex))
 
-            time.sleep(5)
+            # Sleep time of 5 seconds fairly irrelevant since we are going to process a lot. Let
+            # Parallel clean up a bit...but we MAY want to put this whole loop into a thread and then
+            # we can watch the thread. If it times out (some large amount of time) we can kill the 
+            # thread, potentially restart or at least get container to stop with a logged error. 
+            time.sleep(2)
 
         # Dump out some info on how many were succesfully processed
         good = [x for x in batch_results if x.succeeded]

@@ -49,6 +49,9 @@ class StorageRequests(LogBase):
 
         if response.attempts > 1:
             message = f"get_file_versions - {response.action} on {file_identifier} attempts : {response.attempts} codes : {response.status_codes}"
+            message_related = f"get_file_versions : Correlation - {response.status_error_map}"
+            print(message_related)
+            logger.info(message_related)
             print(message)
             logger.info(message)
 

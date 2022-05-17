@@ -20,6 +20,8 @@ class RetryRequestResponse:
         self.status_code = None
         # All status codes
         self.status_codes = []
+        # Map of correlation key to code
+        self.status_error_map = {}
         # Attempts to get there
         self.attempts = 0
         # Result if any
@@ -142,10 +144,14 @@ class RequestsRetryCommand:
                     # Attempt to overcome the container being cold an non-responsive. Happens
                     # once only so let it sit for a few seconds to come up. Happens specifically
                     # if the system has been idle for some time (overnight) - April 12, 2022
-                    time.sleep(10.0)
+                    time.sleep(5.0)
                     HAVE_BAD_REQUEST = True
 
                 retry_response.error = response.status_code
+
+                if "headers" in kwargs:
+                    if "correlation-id" in kwargs["headers"]:
+                        retry_response.status_error_map[kwargs["headers"]["correlation-id"]] = response.status_code
 
             except requests.exceptions.ConnectionError as ex:
                 # There is no recovery from this I don't think

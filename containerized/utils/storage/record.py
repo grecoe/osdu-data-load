@@ -10,7 +10,7 @@ class Record:
     def __init__(self, partition_key:str):
         self.table_name = None
         self.PartitionKey = partition_key
-        self.RowKey = str(uuid.uuid1())
+        self.RowKey = str(uuid.uuid4())
         # Timestamp when the file was processed
         self.processed_time = ""
         # Status code if the processing failed

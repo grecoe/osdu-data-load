@@ -90,4 +90,6 @@ class RoundRobin(LogBase):
             return_workloads.append(os.path.join(self.configuration.workload_path, file_name))
             os.remove(file_name)
 
+        logger.info("Returning {} workloads".format(len(return_workloads)))
+        
         return return_workloads

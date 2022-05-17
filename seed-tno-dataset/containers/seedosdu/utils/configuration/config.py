@@ -42,7 +42,7 @@ class Config:
         self.log_identity = None
         use_identity = config.get("LOGGING", "use_identity")
         if use_identity.lower() == "true":
-            self.log_identity = str(uuid.uuid1())
+            self.log_identity = str(uuid.uuid4())
 
         self.logger:Logger = None
 

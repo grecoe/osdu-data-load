@@ -66,6 +66,9 @@ class FileRequests(LogBase):
 
         if response.attempts > 1:
             message = f"get_upload_url - {response.action} on {response.url} attempts : {response.attempts} codes : {response.status_codes}"
+            message_related = f"get_upload_url : Correlation - {response.status_error_map}"
+            print(message_related)
+            logger.info(message_related)
             print(message)
             logger.info(message)
 
@@ -166,6 +169,9 @@ class FileRequests(LogBase):
 
         if response.attempts > 1:
             message = f"upload_metadata - {response.action} on {response.url} attempts : {response.attempts} codes : {response.status_codes}"
+            message_related = f"upload_metadata : Correlation - {response.status_error_map}"
+            print(message_related)
+            logger.info(message_related)
             print(message)
             logger.info(message)
 

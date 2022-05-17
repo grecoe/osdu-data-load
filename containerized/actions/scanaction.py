@@ -7,6 +7,7 @@ import math
 import multiprocessing
 import typing
 import time
+import uuid
 from utils.configuration.configutil import Config
 from utils.storage.storagetable import AzureTableStoreUtil
 from utils.storage.record import Record
@@ -101,7 +102,7 @@ class ScanAction(LogBase):
             for file_batch in self._batch(files, n_jobs):
 
                 current_batch += 1
-                batch_message = f"Processing batch of found records - {current_batch} of {max_batch}" 
+                batch_message = f"{path} : Processing records detected by scan - {current_batch} of {max_batch}" 
                 print(batch_message)
                 logger.info(batch_message)
 
@@ -170,18 +171,23 @@ class ScanAction(LogBase):
                 file_name)
 
             # TODO : Change the name base here to a UUID so there is no name conflicts.
-            metadata_file = "{}.json".format(file_name_base) 
-            with open(metadata_file, "w") as meta_output:
-                        meta_output.writelines(json.dumps(metadata, indent=4))
-            record_share_util.upload_file(self.configuration.record_metadata_path, metadata_file)
-            os.remove(metadata_file)
+            #metadata_file = "{}.json".format(file_name_base) 
 
             # Add an entry to the storage table for this file. 
             r = Record(self.configuration.record_storage_partition)
             r.file_name = file_name
             r.file_size = source_file.file_size
             r.source_sas = source_file.file_url
+
+            # Meta file with same id as main record
+            metadata_file = "{}.json".format(r.RowKey) 
             r.metadata = "{}/{}".format(self.configuration.record_metadata_path, metadata_file)
+
+            with open(metadata_file, "w") as meta_output:
+                meta_output.writelines(json.dumps(metadata, indent=4))
+            record_share_util.upload_file(self.configuration.record_metadata_path, metadata_file)
+            os.remove(metadata_file)
+
         
             table_util.add_record(self.configuration.record_storage_table, r)        
 

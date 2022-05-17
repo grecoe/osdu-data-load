@@ -23,7 +23,7 @@ class Config:
         config.read(ini_file)
 
         # Used for logging identity so we don't have overlapping logs.
-        self.log_identity = str(uuid.uuid1()) 
+        self.log_identity = str(uuid.uuid4()) 
 
         # INI Settings - Every container should be getting this so it's generic across
         # both load and workflow. 
@@ -198,7 +198,7 @@ class Config:
         dict representing  request headers.
         """
 
-        correlation_id = 'workflow-%s' % datetime.now().strftime('%m%d-%H%M%S')
+        correlation_id = 'workflow-%s' % str(uuid.uuid4())
 
         headers = {
             "Accept" : "application/json",

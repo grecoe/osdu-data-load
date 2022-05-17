@@ -4,7 +4,7 @@
 from utils.configuration.configutil import Config
 from actions.scanaction import ScanAction
 from actions.roundrobinaction import RoundRobin
-from actions.workflowaction import WorkflowAction
+from actions.workloadaction import WorkloadAction
 
 
 ################################################################################
@@ -74,7 +74,7 @@ def workload_container_execute():
 
     configuration = Config.get_workflow_configuration("./settings.ini")
 
-    workflow = WorkflowAction(configuration)
+    workflow = WorkloadAction(configuration)
     workflow.process_records()    
 
 def load_container_execute():

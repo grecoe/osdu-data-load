@@ -138,8 +138,17 @@ class AzureTableStoreUtil:
             try:
                 entity.table_name = table_name
                 resp = log_table.create_entity(entity=entity.get_entity())
+            
+            except ConnectionResetError as ex:
+                # Saw this in testing...we should definitley retry it.
+                try:
+                    resp = log_table.create_entity(entity=entity.get_entity())
+                except Exception as ex:
+                    print("Entity create failed retry- {}".format(entity.file_name))
+                    print(str(ex))
+
             except Exception as ex:
-                print("Entity already exists?")
+                print("Entity create failed - {}".format(entity.file_name))
                 print(str(ex))
 
     @staticmethod
@@ -188,20 +197,24 @@ class AzureTableStoreUtil:
         return_records = []
 
         results = table_client.query_entities(query)
-        for result in results:
-            entity_record = {}
+        if results:
+            for result in results:
+                entity_record = {}
             
-            for key in result:
-                value = result[key]
+                for key in result:
+                    value = result[key]
 
-                if isinstance(result[key], EntityProperty): 
-                    value = result[key].value
-                if isinstance(result[key], TablesEntityDatetime):
-                    value = datetime.datetime.fromisoformat(str(result[key]))
+                    if isinstance(result[key], EntityProperty): 
+                        value = result[key].value
+                    if isinstance(result[key], TablesEntityDatetime):
+                        value = datetime.datetime.fromisoformat(str(result[key]))
 
-                entity_record[key] = value
+                    entity_record[key] = value
                 
-            return_records.append(entity_record)
+                return_records.append(entity_record)
+        else:
+            message = "Failed to get results for query: {}".format(query)
+            print(message)
 
         return return_records
 

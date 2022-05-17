@@ -75,5 +75,5 @@ export PLATFORM_TENANT=$TENANT
 export PLATFORM_CLIENT=$CLIENT
 export PLATFORM_SECRET=$SECRET
 
-echo "*** Launch Script - Replace with ACI Instance LOAD CONTAINER ***"
+echo "*** Launch - Replace with ACI Instance LOAD CONTAINER ***"
 python custtest.py

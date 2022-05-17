@@ -21,7 +21,7 @@ class FileClass:
         data_extension: The lower case file extension, i.e. pdf, without a dot 
         """
         # Identity
-        self.identity = str(uuid.uuid1())
+        self.identity = str(uuid.uuid4())
 
         # Paths to parents but make sure to normalize separators
         parent_paths = []
