@@ -23,6 +23,59 @@ A generic process of loading and tracking a large number of files into the OSDU 
 ## Customer Requirements
 The customer fills out the details in the __custinput.sh__ file. It contains information about the file share that they have created for a data set as well as information about the OSDU instance they have deployed into their subscription. 
 
+
+# Containers
+The design revolves around dynamically growing compute capacity based on the size of the data set to be ingested. 
+
+This is done using Azure Container Instances, as described in the [Execution](#execution) section below. 
+
+In effect, there is one Load Container and many Workload Containers. The work done by each of these containers is listed below. 
+
+## Load Container
+This container is responsible for scanning an Azure File Share and determining which records need to be ingested to OSDU. 
+
+### Overview
+- Search the file share and filter files based on a schema passed to the container. 
+- For each file, search an Azure Storage Table to determine if the file has been seen before. 
+    - Yes: Ignore the file and go to the next
+    - No : 
+        - Generate a metadata record for the file and place it in an Azure File Share
+        - Add information about the file to the Azure Storage Table.
+- Search the Azure Storage Table for all files that have not been processed and create a list of each one. 
+    - NOTE: Files that were not picked up in this run will ALSO be added to the list.
+- Create a series of workload manifests (a list of storage table records to process) using an algorithm to determine the number of containers to use, and save them to a file share. 
+- Spin up an equal number of [Workload Containers](#workload-container) in Azure Container instances passing a single workflow manifest for it to consume. Each container will have the file share where the workflow manifests and file metadata is stored mounted to it. 
+
+### Notes
+Re-running the container as is will not produce duplicate work as this container will only add records to the Azure Storage Table if the file has not been seen before. 
+
+
+## Workload Container
+This container is responsible for processing records into the OSDU platform. An overview of thise steps are:
+
+1. Upload the original file into the OSDU storage.
+2. Associate a metadata record with the oringal file. 
+3. Verify the file and metadata were processed and available through Elastic Search.  
+
+### Overview
+- For each record identifier in the incoming workflow manifest
+    - Verify the record has not already been processed
+        - Yes, ignore
+        - No, process
+- Processing a record comes in a few steps.
+    - Retrieve an upload URI to OSDU storage
+        - Call recieves a signed url to upload to and a file source OSDU uses for the file.
+    - Update the metadata record with the file source recieved from OSDU
+    - Copy a file using a SAS URL from the source account to the signed URL recieved from OSDU
+    - Upload the modified metadata record to OSDU
+    - Retrieve a file version of the file/metadata uploaded to verify that elastic search has picked up the new file. 
+    - Update the storage table record associated with the source file
+        - Success records the OSDU record ID and marks the record as processed.
+
+### Notes
+Re-running the container as is will not produce duplicate work as this container will only process a record that is not currently marked as processed. 
+
+
 # Execution
 To execute this test locally, open up __custinput.sh__ and change the values for all DATA_SOURCE_* fields to a sub/rg/storage acct/file share with the files to upload. Note the path of the files in the share and update DATA_SOURCE_MAP to files you want to ingest. 
 
