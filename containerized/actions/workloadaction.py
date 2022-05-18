@@ -260,11 +260,26 @@ class WorkloadAction(LogBase):
         Returns 
             Record if found, None otherwise
         """
+        logger:Logger = self.get_logger()
+
+        failed_load = True
         return_item:Record = None
         records = table_util.search_table_id(self.configuration.record_storage_table, record_id)
         if records:
             if len(records):
-                return_item = records[0]
+                failed_load = False
+                # Validate that it's not a re-run and the record has not been processed.
+                if records[0].processed == False:
+                    return_item = records[0]
+                else:
+                    logger.info("File {} previously processed on {}".format(
+                        records[0].file_name,
+                        records[0].processed_time
+                    ))
+
+        if failed_load:
+            logger.warn("Table record {} not loaded".format(record_id))
+            
         return return_item
 
 
