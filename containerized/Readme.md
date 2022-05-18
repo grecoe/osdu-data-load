@@ -6,6 +6,9 @@ A generic process of loading and tracking a large number of files into the OSDU 
 <b>Contents</b>
 - [Requirements](#requirements)
     - [Customer Requirements](#customer-requirements)
+- [Containers](#containers)
+    - [Load Container](#load-container)
+    - [Workload Container](#workload-container)
 - [Execution](#execution)
     - [Work flow](#flow)
     - [Storage Table Records](#storage-table-record)
