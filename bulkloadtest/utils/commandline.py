@@ -22,7 +22,9 @@ class CmdUtils:
     @staticmethod
     def get_command_output(command_list, shell:bool, as_json:bool=True):
         # Shell=False if you are running locally, True if in a container (I think)
+
         result = subprocess.run(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+
 
         CmdUtils.LAST_STD_ERR = result.stderr
 

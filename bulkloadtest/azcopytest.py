@@ -17,7 +17,7 @@ Observations
 """
 import os
 import json
-from commandline import CmdUtils
+from bulkloadtest.utils.commandline import CmdUtils
 from datetime import datetime, timedelta
 
 class StorageFile:
@@ -87,15 +87,13 @@ class StorageCopy:
 
 AZCOPY_PATH = "./azcopy"
 
-# When done, the unpacked files are the following, remove them. 
-REMOVE_FILES = ["azcopy", "NOTICE.txt"]
+# Source file to move
+SOURCE_FILE = "https://ACCOUNT.file.core.windows.net/SHARE/PATH/FILE"
+SOURCE_SAS = "?SAS_TOKEN"
 
-SOURCE_FILE = "https://[ACCOUNT].file.core.windows.net/[SHARE]/[PATH]/[FILE]"
-SOURCE_SAS = "?SAS"
-
-DESTINATION_FILE = "https://[ACCOUNT].file.core.windows.net/[SHARE]/[PATH]/[FILE]"
-DESTINATION_SAS = "?SAS"
-
+# Destination file to create
+DESTINATION_FILE = "https://ACCOUNT.file.core.windows.net/SHARE/PATH/FILE"
+DESTINATION_SAS = "?SAS_TOKEN"
 
 
 print("*** Start copy ***")
