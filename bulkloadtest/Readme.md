@@ -26,10 +26,9 @@ Observations after performing multiple tests for the above configurations are as
 |1|28.96|40.72[*]|25.14[*]|
 |2|130|182.81[*]|5.60[*]|
 |> 3|290.96|409.16[*]|2.50[*]|
-|4|2.02[**]|2.84[*]|360.48[*]|
+|4|7.16|10.08[*]|79.24[*]|
 
 [*] Calculated from GB/Min numbers
-[**] Based on initial logs from the 4 containers, files are taking from 40-60 minutes. Final results, if vastly different, will be updated here. 
 
 <b>Notes:</b>
 

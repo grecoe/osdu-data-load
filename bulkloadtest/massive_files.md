@@ -121,7 +121,7 @@ Given that there was only one test, times were averaged.
 
 |Name|Method|Files|Errors|Size(GB)|Time(min)|Throughput (GB/MIN)|
 |---|---|---|---|---|---|----|
-|Batch 1|4 instances ACI Container - 5 files each|20|0|2020|-|-|
+|Batch 1|4 instances ACI Container - 5 files each|20|0|2020|281.77|7.16|
 
 
 
@@ -135,7 +135,7 @@ Taking the averages above, single file vs. batch approaches to move 1PB of data
 |Batch|File Share - File Share|28.96|40.72|25.14|
 |Batch|File Share - Blob Storage|130|182.81|5.60|
 |Batch|Blob Storage - Blob Storage|290.96|409.16|2.50|
-|Batch|Blob Storage - Blob Storage(region2)|2.02|2.84|360.48|
+|Batch|Blob Storage - Blob Storage(region2)|7.16|10.08|79.24|
 
 
 However, this approach seems to be able to handle 
