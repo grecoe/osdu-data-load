@@ -15,17 +15,20 @@ However, this would still require 2 things:
 - [Moving Data](#moving-them-around)
     - [SAS Tokens](#sas)
     - [Applications](#applications)
-- [Observations](#observations)
+- [Observations File Share](#observations---file-to-file-shares)
     - [Single Files](#single-files)
         - Single large files
-    - [Datasets](#datasets)
-        - Multiple smaller files
     - [Batch - Python](#batch-with-parallel-from-one-machine)
         - Batch large files with python
     - [Pseudo Batch - Cloud Shell](#manual-batch-cloud-shell)
         - Batch large files with Cloudshell
     - [Batch - Cloud Shell](#cloudshell-batch)
         - Move entire directory with 5 - 101 GB files
+    - [Datasets](#datasets)
+        - Multiple smaller files
+- [Observations Blob Storage](#observations---file-to-blob-storage)
+- [Observations Blob to Blob](#observations---blob-to-blob-storage)
+- [Petabyte Goal](#average-throughputs--to-pb)
 
 # Source - Google Docs
 
@@ -33,15 +36,21 @@ Load files from [google docs](https://wiki.seg.org/wiki/Open_data#Poseidon_3D_se
 
 # Moving them around
 
+Note that creating a SAS token that works has been a challenge that I've not focused on when it wasn't working. Collect SAS tokens for your storage account(s) using the Azure Portal. 
+
+## Manual
 - Use CloudShell azcopy
 - Create SAS on account with source file share then build URL:
-    - https://[ACCOUNT].file.core.windows.net/[SHARE]/[PATH]/[FILE].zgy?[ACCOUNT_SAS]
+    - https://[ACCOUNT].file.core.windows.net/[SHARE]/[PATH]/[FILE]?[ACCOUNT_SAS]
 - Create a SAS on the desitnation share
-    - https://[ACCOUNT].file.core.windows.net/[SHARE]/[PATH]/[FILE].zgy?[ACCOUNT_SAS]
+    - https://[ACCOUNT].file.core.windows.net/[SHARE]/[PATH]/[FILE]?[ACCOUNT_SAS]
     - You can change file name to make multiple copies
     - You can also NOT provide a name and it will use the name of the source file. 
 - Run az copy
     - azcopy cp "SOURCE" "DESTINATION"
+
+## movesingle.py
+This is similar to above but you put in the URL to the file and the SAS token into the variables towards the top of the file. 
 
 ## SAS
 
@@ -51,15 +60,83 @@ This source has the ability to generate SAS tokens, but they don't seem to be ta
 - Object and Container needed on source if moving a folder. 
 
 ## Applications
-- azcopytest.py
+- movesingle.py
     - Provide information in this one file to move one file
-- execute_move.py
+- movebatch.py
     - Add settings to config.ini for source folder and destination folder
+    - Also used in a container to fan out execution
 
-# Observations
-Using cloudshell and SAS URL's to targets, obsservations on moving data with azcopy. Then batched it in Python, then finally two versions of Cloud Shell moving two different files. 
+# Observations - File to File Shares
+Approaches have varied widely to determine if there was a better way of maximizing throughput from one storage account to another, but relying on the underlying azcopy tool to do so. 
 
-When cloudshell works on a single file, it's incredibly fast. When it's batched (more than one file at a time in different processes pushing it) it seems to act almost synchronously. That is, the time goes up linearly with more copies fired at the same time. 
+|Name|Method|Files|Errors|Size(GB)|Time(min)|Throughput (GB/MIN)|
+|---|---|---|---|---|---|----|
+|[Single 1](#single-files)|CloudShell|1|0|15.7|0.75|20.93|
+|[Single 2](#single-files)|CloudShell|1|0|101|3.95|25.56|
+|[Single 3](#cloudshell-batch)|CloudShell|5|0|505|20.31|24.86|
+|Single 4|Docker Local(1)|5|0|505|22.60|22.34|
+|[Batch 1](#batch-with-parallel-from-one-machine)|joblib.Parallel|2|0|202|6.64|30.37|
+|Batch 2|2 instances python script|2|0|202|6.61|30.55|
+|Batch 3|2 instances python script|10|0|1010|40.73|24.79|
+|[Batch 4](#4-aci-containers)|4 instances ACI Container|20|0|2020|67|30.14|
+|Batch 5|8 instances ACI Container|40|7|3434[*]|149|23.04|
+|Batch 6|2 instances ACI Container - 20 files each|40|0|4040|134.38|30.06|
+|Batch 7|4 instances ACI Container - 20 files each|80|31|4949[**]|160|30.93|
+|Batch 7|4 instances ACI Container - 11 files each|44|0|4444|159.52|27.85|
+|[Dataset](#datasets)|Move TNO Data|44573|0|1.15|7.45|0.15|
+
+[*] This included a bad fail as there was actuall 34 not 33 files.
+[**] Share sized reached after 49 files
+
+# Observations - File to Blob Storage
+Source File Share, destination BLob Storage
+
+NOTE: Not seeing any long tail copies when destination was File Share. 
+
+|Name|Method|Files|Errors|Size(GB)|Time(min)|Throughput (GB/MIN)|
+|---|---|---|---|---|---|----|
+|Batch 1|4 instances ACI Container - 11 files each|44|0|4444|33.76|131.63|
+|Batch 1|4 instances ACI Container - 20 files each|80|0|8080|79.98|101.02[*]|
+
+
+# Observations - Blob to Blob Storage
+Source Blob, destination BLob Storage
+
+NOTE: Not seeing any long tail copies when destination was File Share. 
+
+## Same Region
+|Name|Method|Files|Errors|Size(GB)|Time(min)|Throughput (GB/MIN)|
+|---|---|---|---|---|---|----|
+|Batch 1|4 instances ACI Container - 20 files each|80|0|8080|27.77|290.96|
+|Batch 1|4 instances ACI Container - 20 files each|80|0|8080|27.60|292.75|
+
+# Cross Region
+Source: East US, Destination: West US 2
+
+Performance falls off a cliff in this scenario. A single 101GB file run locally tool 18.57 minutes - 5.44GB/min. Given that, only a single multi container run was done to see if this initial run held true for multiple copies. 
+
+The multi approach was seen to be the fastest in the previous tests, but from observation, this scenario only gets slower with multiple processes (ACI instances), going at it. Looking at the logs while executing it's taking each container 40-60 minutes to move a single file. That would run it down to about (average 50 minutes) to 2.02 GB/min
+
+Given that there was only one test, times were averaged. 
+
+|Name|Method|Files|Errors|Size(GB)|Time(min)|Throughput (GB/MIN)|
+|---|---|---|---|---|---|----|
+|Batch 1|4 instances ACI Container - 5 files each|20|0|2020|-|-|
+
+
+
+
+# Average Throughputs / To PB
+Taking the averages above, single file vs. batch approaches to move 1PB of data
+
+|Approach|Destination|Average GB/Min|Avg Daily (TB)|Days to PB|
+|----|----|----|----|----|
+|Singles|File Share - File Share|23.78|33.44|30.61|
+|Batch|File Share - File Share|28.96|40.72|25.14|
+|Batch|File Share - Blob Storage|130|182.81|5.60|
+|Batch|Blob Storage - Blob Storage|290.96|409.16|2.50|
+|Batch|Blob Storage - Blob Storage(region2)|2.02|2.84|360.48|
+
 
 However, this approach seems to be able to handle 
 
@@ -132,3 +209,25 @@ When adding files to OSDU, you first have to get an upload URL. This is a Signed
 In this scenario, we are just blindly dropping files into another Azure Storage Account without regard to an actual location. 
 
 So, the reality is, each file needs to be processed individually (after getting the upload url).
+
+## 4 ACI Containers
+
+movetest2
+Starting  2022-05-24 14:18:00.628085
+Total Run Time:  2022-05-24 15:11:08.897787  =  53.13782796666667
+Long tail was a 30 minute copy
+
+movetest3
+Starting  2022-05-24 14:20:41.581492
+Total Run Time:  2022-05-24 14:55:42.877083  =  35.021592766666664
+
+movetest1
+Starting  2022-05-24 14:16:34.349103
+Total Run Time:  2022-05-24 15:20:29.758781  =  63.92349413333333
+Long tail was a 30 minute copy
+
+movetest4
+Starting  2022-05-24 14:22:02.757290
+Total Run Time:  2022-05-24 15:25:12.589662  =  63.16387248333333
+Long tail was a 30 minute copy
+

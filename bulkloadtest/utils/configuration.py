@@ -1,6 +1,9 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
+
 import configparser
 import os
-import typing
 
 class Storage:
     def __init__(self):
@@ -11,6 +14,7 @@ class Storage:
         self.path = None
         self.account_sas = None
         self.connection_str = None
+        self.type = None
 
     def set_connection_string(self):
         self.connection_str = "DefaultEndpointsProtocol=https;AccountName={};AccountKey={};EndpointSuffix=core.windows.net".format(
@@ -27,6 +31,7 @@ class Storage:
         return_obj.account_key = config_parser.get(section, "key")
         return_obj.share_name = config_parser.get(section, "share")
         return_obj.path = config_parser.get(section, "path")
+        return_obj.type = config_parser.get(section, "type")
         sas = config_parser.get(section, "sas")
         if sas:
             return_obj.account_sas = sas
@@ -39,6 +44,7 @@ class Configuration:
         self.az_copy_location:str = None
         self.source:Storage = None
         self.destination:Storage = None
+        self.file_count = -1
 
 
         # Get the INI settings
@@ -49,5 +55,11 @@ class Configuration:
         config.read(ini_file)
 
         self.az_copy_location = config.get("AZCOPY", "azcopy")
+        self.file_count = config.get("LOAD", "files", fallback=None)
+        if not self.file_count:
+            self.file_count = -1
+        else:
+            self.file_count = int(self.file_count)
+            
         self.source = Storage.load_storage(config, "SOURCE")
         self.destination = Storage.load_storage(config, "DESTINATION")

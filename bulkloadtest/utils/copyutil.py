@@ -1,3 +1,6 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
 
 import os
 from utils.commandline import CmdUtils
@@ -28,7 +31,7 @@ class StorageCopy:
 
             output = output.split(os.linesep)
             print("AZ COPY COMPLETE")
-            # print(json.dumps(output, indent=4))
+            print(json.dumps(output, indent=4))
 
             target = [x for x in output if "Total Number of Transfers" in x]
             result = [x for x in output if "Number of Transfers Completed" in x]
@@ -39,15 +42,14 @@ class StorageCopy:
             minutes = StorageCopy._parse_result(time, float)
 
             if expected != moved:
-                raise Exception("Attempted: {} , Moved: {}".format(expected, moved))
+                print(json.dumps(output, indent=4))
 
-            copied.success = True
+            copied.success = (expected == moved)
             copied.minutes = minutes
 
         except Exception as ex:
             print("Copy Error: ", str(ex))
 
-        # print(json.dumps(copied.__dict__, indent=4))
         return copied 
 
     @staticmethod

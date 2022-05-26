@@ -1,3 +1,7 @@
+##########################################################
+# Copyright (c) Microsoft Corporation.
+##########################################################
+
 import json
 import subprocess
 
@@ -24,7 +28,6 @@ class CmdUtils:
         # Shell=False if you are running locally, True if in a container (I think)
 
         result = subprocess.run(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
-
 
         CmdUtils.LAST_STD_ERR = result.stderr
 
