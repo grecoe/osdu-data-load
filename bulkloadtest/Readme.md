@@ -16,8 +16,13 @@ The tests consisted of moving these large files between Azure Storage File Share
 |----|----|----|----|----|
 |1|File Share|East US|File Share|East US|
 |2|File Share|East US|Blob Storage|East US|
-|3|Blob Storage|East US|Blob Storage|East US|
-|4|Blob Storage|East US|Blob Storage|West US2|
+|3|Blob Storage|East US|Blob Storage[*]|East US|
+|4|Blob Storage|East US|Blob Storage[**]|East US|
+|5|Blob Storage|East US|Blob Storage|West US2|
+
+[*] Same subscripton, same region
+
+[**] Different subscriptons, same region
 
 Observations after performing multiple tests for the above configurations are as follows: 
 
@@ -26,7 +31,8 @@ Observations after performing multiple tests for the above configurations are as
 |1|28.96|40.72[*]|25.14[*]|
 |2|130|182.81[*]|5.60[*]|
 |> 3|290.96|409.16[*]|2.50[*]|
-|4|7.16|10.08[*]|79.24[*]|
+|4|176|247.5[*]|4.13[*]|
+|5|7.16|10.08[*]|79.24[*]|
 
 [*] Calculated from GB/Min numbers
 

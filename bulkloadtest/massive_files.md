@@ -108,7 +108,12 @@ NOTE: Not seeing any long tail copies when destination was File Share.
 |Name|Method|Files|Errors|Size(GB)|Time(min)|Throughput (GB/MIN)|
 |---|---|---|---|---|---|----|
 |Batch 1|4 instances ACI Container - 20 files each|80|0|8080|27.77|290.96|
-|Batch 1|4 instances ACI Container - 20 files each|80|0|8080|27.60|292.75|
+|Batch 2|4 instances ACI Container - 20 files each|80|0|8080|27.60|292.75|
+|Batch 3[*]|3 instances ACI Container - 10 files each|30|0|3030|19.93|152.00|
+|Batch 4[*]|4 instances ACI Container - 10 files each|40|0|4040|19.08|200.71|
+
+
+[*] Two storage accounts same region but different subscripitons. 
 
 # Cross Region
 Source: East US, Destination: West US 2
