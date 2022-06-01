@@ -29,6 +29,7 @@ However, this would still require 2 things:
 - [Observations Blob Storage](#observations---file-to-blob-storage)
 - [Observations Blob to Blob](#observations---blob-to-blob-storage)
 - [Petabyte Goal](#average-throughputs--to-pb)
+    - [Petabyte move error](#massive-move)
 
 # Source - Google Docs
 
@@ -114,6 +115,26 @@ NOTE: Not seeing any long tail copies when destination was File Share.
 
 
 [*] Two storage accounts same region but different subscripitons. 
+
+## Massive Move
+Attempt to move 1000 files per 10 ACI instances equalling approximately 1PB of data. 
+
+- Attempt 1 - Moved approximately 3186 files (~314TB) before failures in move occured. Logs were full of reporting failures but there were so many that the log ran over and couldn't tell. Second run had it fail with an auth header so re-attempting with new SAS tokens, which may be the cause. 
+- Attempt 3 - Update SAS tokens but still seeing failure trying to get source blob. 
+    - Took URL from ACI and attempt to retrieve, Auth failure (below)
+    - Went to portal, got URL of blob (doesn't work along because no public access)
+        - Generate new SAS and append to URL, Auth Failure as noted below. 
+    - <b>Appears that I broke the account in some way</b>
+        - Why is this a problem? Have I hit a limit? 
+        - If a limit, would premium have solved the problem? 
+
+```xml
+<Error>
+<Code>AuthenticationFailed</Code>
+<Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature. RequestId:eeef7192-001e-0000-57a0-75692e000000 Time:2022-06-01T10:14:25.8670350Z</Message>
+<AuthenticationErrorDetail>Signature did not match. String to sign used was segyshare rwdlacupitfx bfqt co 2022-06-01T10:14:15Z 2022-06-01T18:14:15Z https 2021-06-08 </AuthenticationErrorDetail>
+</Error>
+```
 
 # Cross Region
 Source: East US, Destination: West US 2
