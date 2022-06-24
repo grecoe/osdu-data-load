@@ -6,5 +6,7 @@ dist
 OSDU_Data_Upload.docx
 output/
 outputwork/
-azcopy
-NOTICE.txt
+custinput_clean.sh
+custinput_used.sh
+custrun_clean.sh
+custrun_used.sh

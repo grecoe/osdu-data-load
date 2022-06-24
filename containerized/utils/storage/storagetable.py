@@ -83,7 +83,6 @@ class AzureTableStoreUtil:
 
         return return_records
 
-
     def update_record(self, table_name:str, entity:Record) -> None:
         """
         Update a record in the storage table. Creates the table if not already
@@ -180,7 +179,6 @@ class AzureTableStoreUtil:
         )
 
         return query_filter
-
 
     def _parse_query_results(self, table_client:TableClient, query:str) -> typing.List[dict]:
         """
